@@ -1,8 +1,13 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AdminLogin from "./pages/LoginPage";
+
 function App() {
   return(
-    <div>
-      <h1>Hello World</h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<AdminLogin />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 
