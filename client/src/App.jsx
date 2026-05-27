@@ -1,12 +1,21 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import AdminLogin from "./pages/LoginPage";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AdminLogin from "./pages/auth/LoginPage";
+import Homepage from "./pages/home/Homepage";
+import ProtectedRoute from "./components/ProtectedRoutes";
 
 function App() {
   return(
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<AdminLogin />} />
         <Route path="/login" element={<AdminLogin />} />
+        <Route path="/" element={<Navigate to ="/login" replace />} />
+        
+        <Route path="/home" element={
+          <ProtectedRoute>
+            <Homepage />
+          </ProtectedRoute>
+        } />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
