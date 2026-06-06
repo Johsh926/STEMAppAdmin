@@ -1,0 +1,89 @@
+/* src/pages/home/pages.module.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.page { display: flex; flex-direction: column; gap: 20px; font-family: 'Inter', sans-serif; }
+
+.pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.sectionTitle { font-size: 16px; font-weight: 600; color: #0f172a; }
+.sectionSub { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+
+.statsGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 768px) { .statsGrid { grid-template-columns: repeat(2, 1fr); } }
+
+.loadingText { text-align: center; padding: 48px; color: #94a3b8; font-size: 14px; }
+
+.filterRow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.filterBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border: 1px solid #e2e8f0; border-radius: 8px;
+  background: #ffffff; font-size: 13px; font-weight: 500; color: #64748b;
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s;
+}
+.filterBtn:hover { background: #f1f5f9; }
+.filterBtnActive { background: #ede9fe; color: #7c3aed; border-color: #c4b5fd; }
+.filterCount {
+  background: #f1f5f9; color: #64748b;
+  border-radius: 99px; font-size: 11px; padding: 1px 7px; font-weight: 600;
+}
+.filterBtnActive .filterCount { background: #ddd6fe; color: #7c3aed; }
+.filterSelect {
+  padding: 7px 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+  background: #ffffff; font-size: 13px; color: #0f172a;
+  font-family: 'Inter', sans-serif; outline: none; cursor: pointer;
+}
+.filterSelect:focus { border-color: #7c3aed; }
+
+.muted { color: #64748b; }
+.questionCell { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.actions { display: flex; gap: 8px; }
+.rowBtn {
+  padding: 4px 12px; border: 1px solid #e2e8f0; border-radius: 6px;
+  background: none; font-size: 12px; font-weight: 500; color: #475569;
+  cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s;
+}
+.rowBtn:hover { background: #f1f5f9; }
+.rowBtnDanger:hover { border-color: #fecaca; color: #dc2626; background: #fef2f2; }
+.actionBtn {
+  padding: 8px 16px; background: #7c3aed; color: white; border: none;
+  border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: background 0.15s; white-space: nowrap;
+}
+.actionBtn:hover { background: #6d28d9; }
+.actionBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.modalFields { display: flex; flex-direction: column; gap: 14px; }
+.modalError { font-size: 13px; color: #dc2626; margin-top: 8px; }
+.modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.fieldGroup { display: flex; flex-direction: column; gap: 6px; }
+.label { font-size: 13px; font-weight: 500; color: #374151; }
+.input {
+  width: 100%; padding: 9px 12px; background: #f8fafc;
+  border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;
+  color: #0f172a; font-family: 'Inter', sans-serif; outline: none;
+  transition: border-color 0.15s; box-sizing: border-box;
+}
+.input:focus { border-color: #7c3aed; background: #ffffff; }
+.twoCol { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.settingsGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (max-width: 640px) { .settingsGrid { grid-template-columns: 1fr; } }
+.settingCard {
+  background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 20px; display: flex; flex-direction: column; gap: 6px;
+}
+.settingTitle { font-size: 14px; font-weight: 600; color: #0f172a; }
+.settingDesc { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+
+.toggle { position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggleSlider {
+  position: absolute; inset: 0; background: #e2e8f0;
+  border-radius: 99px; transition: background 0.2s;
+}
+.toggleSlider::before {
+  content: ''; position: absolute; width: 16px; height: 16px;
+  left: 3px; top: 3px; background: white; border-radius: 50%;
+  transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.toggle input:checked + .toggleSlider { background: #7c3aed; }
+.toggle input:checked + .toggleSlider::before { transform: translateX(18px); }

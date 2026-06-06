@@ -1,0 +1,71 @@
+/* src/components/Navbar.module.css */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 60px;
+  gap: 16px;
+  font-family: 'Inter', sans-serif;
+}
+.navLeft {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex: 1;
+  min-width: 0;
+}
+.navLogo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.navLogoIcon { font-size: 20px; }
+.navLogoText { font-size: 15px; font-weight: 700; color: #7c3aed; white-space: nowrap; }
+.navTabs { display: flex; align-items: center; gap: 2px; }
+.navTab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.navTab:hover { background: #f1f5f9; color: #0f172a; }
+.navTabActive { background: #ede9fe; color: #7c3aed; }
+.navTabIcon { font-size: 14px; }
+.navRight { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.navUser {
+  font-size: 13px;
+  color: #64748b;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.signOutBtn {
+  padding: 7px 16px;
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.signOutBtn:hover:not(:disabled) { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
+.signOutBtn:disabled { opacity: 0.5; cursor: not-allowed; }
