@@ -1,41 +1,65 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/authContext";
+import { doSignOut } from "../../firebase/auth";
+import Navbar from "../../components/Navbar";
+import Overview  from "./Overview";
+import Users     from "./Users";
+import Questions from "./Questions";
+import Settings  from "./Settings";
 import styles from "./Homepage.module.css";
 
-function OvervierTab(){
-  return(
-    <div className={styles.tabContent}>
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <span className={styles.statIcon}>👥</span>
-          <div>
-            <p className={styles.statValue}>128</p>
-            <p className={styles.statLabel}>Total Users</p>
-          </div>
+const TABS = [
+  { id: "overview",  label: "Overview",  icon: "🏠" },
+  { id: "users",     label: "Users",     icon: "👥" },
+  { id: "questions", label: "Questions", icon: "📋" },
+  { id: "settings",  label: "Settings",  icon: "⚙️" },
+];
+
+export default function Homepage() {
+  const [activeTab, setActiveTab]   = useState("overview");
+  const [signingOut, setSigningOut] = useState(false);
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleSignOut() {
+    setSigningOut(true);
+    try {
+      await doSignOut();
+      navigate("/login");
+    } catch (err) {
+      console.error(err);
+      setSigningOut(false);
+    }
+  }
+
+  function renderPage() {
+    switch (activeTab) {
+      case "overview":  return <Overview />;
+      case "users":     return <Users />;
+      case "questions": return <Questions />;
+      case "settings":  return <Settings />;
+      default:          return <Overview />;
+    }
+  }
+
+  return (
+    <div className={styles.layout}>
+      <Navbar
+        tabs={TABS}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        userEmail={currentUser?.email}
+        onSignOut={handleSignOut}
+        signingOut={signingOut}
+      />
+      <main className={styles.main}>
+        <div className={styles.pageTitle}>
+          <h1 className={styles.pageTitleText}>{TABS.find(t => t.id === activeTab)?.label}</h1>
+          <p className={styles.pageTitleSub}>Manage your {TABS.find(t => t.id === activeTab)?.label.toLowerCase()} here</p>
         </div>
-        <div className={styles.statCard}>
-          <span className={styles.statIcon}>🎓</span>
-          <div>
-            <p className={styles.statValue}>34</p>
-            <p className={styles.statLabel}>Teachers</p>
-          </div>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statIcon}>📋</span>
-          <div>
-            <p className={styles.statValue}>210</p>
-            <p className={styles.statLabel}>Questions</p>
-          </div>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statIcon}>📊</span>
-          <div>
-            <p className={styles.statValue}>Activity Chart</p>
-            <p className={styles.statLabel}>Chart</p>
-          </div>
-        </div>
-      </div>
+        {renderPage()}
+      </main>
     </div>
   );
 }
