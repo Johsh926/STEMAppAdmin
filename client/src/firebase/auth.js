@@ -8,3 +8,11 @@ export function doSignInWithEmailAndPassword(email, password){
 export function doSignOut(){
   return signOut(auth);
 }
+
+export function doCreateUserWithEmailAndPassword(email, password) {
+  return createUserWithEmailAndPassword(auth, email, password);
+}
+
+export function doPasswordReset(email) {
+  return sendPasswordResetEmail(auth, email);
+}

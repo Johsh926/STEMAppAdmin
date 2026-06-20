@@ -6,6 +6,7 @@ import Navbar from "../../components/Navbar";
 import Overview  from "./Overview";
 import Users     from "./Users";
 import Questions from "./Questions";
+import Accounts from "./Accounts";
 import Settings  from "./Settings";
 import styles from "./Homepage.module.css";
 
@@ -13,6 +14,7 @@ const TABS = [
   { id: "overview",  label: "Overview",  icon: "🏠" },
   { id: "users",     label: "Users",     icon: "👥" },
   { id: "questions", label: "Questions", icon: "📋" },
+  { id: "accounts",  label: "Accounts",  icon: "🔑" },
   { id: "settings",  label: "Settings",  icon: "⚙️" },
 ];
 
@@ -38,6 +40,7 @@ export default function Homepage() {
       case "overview":  return <Overview />;
       case "users":     return <Users />;
       case "questions": return <Questions />;
+      case "accounts":  return <Accounts />;
       case "settings":  return <Settings />;
       default:          return <Overview />;
     }
