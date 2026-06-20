@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../../firebase/firebase";
+import { db, auth } from "../../firebase/firebase";
+import { sendPasswordResetEmail } from "firebase/auth";
 import Table from "../../components/Table";
 import Badge from "../../components/Badge";
 import Modal from "../../components/Modal";
@@ -48,6 +49,17 @@ export default function Users() {
       await updateDoc(doc(db, user.col, user.id), { status: newStatus });
       setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
     } catch (err) { console.error(err); }
+  }
+
+  async function handlePasswordReset(email) {
+    if (!email) { alert("No email found for this user."); return; }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert(`Password reset email sent to ${email}`);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to send reset email.");
+    }
   }
 
   const filtered = filter === "all" ? allUsers : allUsers.filter(u => u.role.toLowerCase() === filter);
@@ -102,6 +114,9 @@ export default function Users() {
               </button>
               <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`} onClick={() => handleDelete(u.id, u.col)}>
                 Remove
+              </button>
+              <button className={styles.rowBtn} onClick={() => doPasswordReset(u.email || u.admin_email)}>
+                Reset Password
               </button>
             </td>
           </tr>

@@ -10,7 +10,7 @@ export default function Badge({ color = "gray", children }){
   };
   return(
   <span className={`${styles.badge} ${colorMap[color] || colorMap.gray}`}>
-    [children]
+    {children}
   </span>
 );
 }

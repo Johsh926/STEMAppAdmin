@@ -87,3 +87,50 @@
 }
 .toggle input:checked + .toggleSlider { background: #7c3aed; }
 .toggle input:checked + .toggleSlider::before { transform: translateX(18px); }
+
+.accountSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.accountCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 480px;
+}
+
+.accountCardIcon {
+  font-size: 32px;
+}
+
+.accountCardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.accountCardDesc {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+
+.fieldHint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: -2px;
+}
+
+.modalSuccess {
+  font-size: 13px;
+  color: #16a34a;
+  margin-top: 8px;
+}

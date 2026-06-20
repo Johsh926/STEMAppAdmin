@@ -10,7 +10,7 @@ export default function Navbar({ tabs, activeTab, onTabChange, userEmail, onSign
         </div>
         <nav className={styles.navTabs}>
           {tabs.map(tab => (
-            <button key={tab.id} onClick={() => onTabChange(tab, id)} className={`${styles.navTab} ${activeTab === tab.id ? styles.navTabActive : ""}`}>
+            <button key={tab.id} onClick={() => onTabChange(tab.id)} className={`${styles.navTab} ${activeTab === tab.id ? styles.navTabActive : ""}`}>
               <span className={styles.navTabIcon}>{tab.icon}</span>
               {tab.label}
             </button>

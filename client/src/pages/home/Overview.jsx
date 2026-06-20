@@ -13,13 +13,13 @@ export default function Overview(){
       try{
         const [usersSnap, teacherSnap, adminsSnap, questionsSnap] = await Promise.all([
           getDocs(collection(db, "users")),
-          getDocs(collection(db, "teachersaccounts")),
+          getDocs(collection(db, "teacheraccounts")),
           getDocs(collection(db, "adminaccounts")),
           getDocs(collection(db, "questions")),
         ]);
         setStats({
           users:  usersSnap.size,
-          teachers: teachersSnap.size,
+          teachers: teacherSnap.size,
           admins: adminsSnap.size,
           questions: questionsSnap.size,
         });
