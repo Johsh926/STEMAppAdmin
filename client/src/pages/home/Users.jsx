@@ -5,7 +5,7 @@ import { sendPasswordResetEmail } from "firebase/auth";
 import Table from "../../components/Table";
 import Badge from "../../components/Badge";
 import Modal from "../../components/Modal";
-import styles from "./pages.module.css";
+import styles from "./Pages.module.css";
 
 export default function Users() {
   const [allUsers, setAllUsers]         = useState([]);

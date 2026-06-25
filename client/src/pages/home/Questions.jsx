@@ -7,7 +7,7 @@ import { db } from "../../firebase/firebase";
 import Table from "../../components/Table";
 import Badge from "../../components/Badge";
 import Modal from "../../components/Modal";
-import styles from "./pages.module.css";
+import styles from "./Pages.module.css";
 
 const DIFFICULTIES = ["easy", "medium", "hard"];
 
@@ -21,6 +21,7 @@ export default function Questions() {
   const [savingTopic, setSavingTopic]           = useState(false);
   const [filterTopic, setFilterTopic]           = useState("all");
   const [filterDifficulty, setFilterDifficulty] = useState("all");
+  const [editingQuestion, setEditingQuestion]   = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -103,6 +104,31 @@ export default function Questions() {
     }
   }
 
+  async function handleEdit(updated) {
+    try {
+      await setDoc(
+        doc(db, "questions", updated.topic, updated.difficulty, updated.id),
+        {
+          question:  updated.question,
+          answer:    updated.answer,
+          choices:   updated.choices,
+          createdBy: updated.createdBy,
+          createdAt: updated.createdAt,
+        }
+      );
+      setQuestions(prev =>
+        prev.map(q =>
+          q.id === updated.id && q.topic === updated.topic && q.difficulty === updated.difficulty
+            ? { ...q, ...updated }
+            : q
+        )
+      );
+    } catch (err) {
+      console.error("Edit failed:", err);
+      throw err;
+    }
+  }
+
   const filtered = questions.filter(q => {
     const topicOk = filterTopic      === "all" || q.topic      === filterTopic;
     const diffOk  = filterDifficulty === "all" || q.difficulty === filterDifficulty;
@@ -118,6 +144,8 @@ export default function Questions() {
 
   return (
     <div className={styles.page}>
+
+      {/* PAGE HEADER */}
       <div className={styles.pageHeader}>
         <div>
           <h2 className={styles.sectionTitle}>Question Bank</h2>
@@ -133,6 +161,7 @@ export default function Questions() {
         </div>
       </div>
 
+      {/* ADD TOPIC INLINE FORM */}
       {showAddTopic && (
         <div className={styles.inlineForm}>
           <input
@@ -158,6 +187,7 @@ export default function Questions() {
         </div>
       )}
 
+      {/* TOPICS DISPLAY */}
       <div className={styles.filterRow}>
         {topics.map(t => (
           <span key={t} className={`${styles.filterBtn} ${styles.topicChip}`}>
@@ -166,6 +196,7 @@ export default function Questions() {
         ))}
       </div>
 
+      {/* FILTERS */}
       <div className={styles.filterRow}>
         <select
           className={styles.filterSelect}
@@ -177,7 +208,6 @@ export default function Questions() {
             <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
           ))}
         </select>
-
         <select
           className={styles.filterSelect}
           value={filterDifficulty}
@@ -190,6 +220,7 @@ export default function Questions() {
         </select>
       </div>
 
+      {/* TABLE */}
       <Table
         columns={["#", "Question", "Topic", "Difficulty", "Answer", "Actions"]}
         loading={loading}
@@ -203,7 +234,13 @@ export default function Questions() {
             <td><Badge color="purple">{q.topic}</Badge></td>
             <td><Badge color={diffColor(q.difficulty)}>{q.difficulty}</Badge></td>
             <td className={styles.muted}>{q.answer || "—"}</td>
-            <td>
+            <td className={styles.actions}>
+              <button
+                className={styles.rowBtn}
+                onClick={() => setEditingQuestion(q)}
+              >
+                Edit
+              </button>
               <button
                 className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
                 onClick={() => handleDelete(q.id, q.topic, q.difficulty)}
@@ -215,6 +252,7 @@ export default function Questions() {
         ))}
       </Table>
 
+      {/* MODALS */}
       {showAddModal && (
         <AddQuestionModal
           topics={topics}
@@ -222,18 +260,28 @@ export default function Questions() {
           onAdded={fetchAll}
         />
       )}
+
+      {editingQuestion && (
+        <EditQuestionModal
+          question={editingQuestion}
+          topics={topics}
+          onClose={() => setEditingQuestion(null)}
+          onSaved={handleEdit}
+        />
+      )}
+
     </div>
   );
 }
 
 function AddQuestionModal({ topics, onClose, onAdded }) {
   const [form, setForm] = useState({
-    question:  "",
+    question:   "",
     difficulty: "easy",
-    topic:     topics[0] || "",
-    choices:   ["", "", "", ""],
-    answer:    "",
-    createdBy: "",
+    topic:      topics[0] || "",
+    choices:    ["", "", "", ""],
+    answer:     "",
+    createdBy:  "",
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
@@ -245,35 +293,19 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
   function handleChoiceChange(i, val) {
     setForm(prev => {
       const choices = [...prev.choices];
-      choices[i] = val;
-      // If the current answer was this choice, update it too
       const newAnswer = prev.answer === prev.choices[i] ? val : prev.answer;
+      choices[i] = val;
       return { ...prev, choices, answer: newAnswer };
     });
   }
 
   async function handleSave() {
-    if (!form.question) {
-      setError("Question is required.");
-      return;
-    }
+    if (!form.question) { setError("Question is required."); return; }
     const filledChoices = form.choices.filter(c => c.trim() !== "");
-    if (filledChoices.length < 2) {
-      setError("At least 2 choices are required.");
-      return;
-    }
-    if (!form.answer) {
-      setError("Please select the correct answer.");
-      return;
-    }
-    if (!filledChoices.includes(form.answer)) {
-      setError("Correct answer must match one of the choices exactly.");
-      return;
-    }
-    if (!form.topic) {
-      setError("Please select a topic.");
-      return;
-    }
+    if (filledChoices.length < 2) { setError("At least 2 choices are required."); return; }
+    if (!form.answer) { setError("Please select the correct answer."); return; }
+    if (!filledChoices.includes(form.answer)) { setError("Correct answer must match one of the choices exactly."); return; }
+    if (!form.topic) { setError("Please select a topic."); return; }
 
     setSaving(true);
     try {
@@ -296,7 +328,6 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
   return (
     <Modal title="Add New Question" onClose={onClose}>
       <div className={styles.modalFields}>
-
         <div className={styles.twoCol}>
           <div className={styles.fieldGroup}>
             <label className={styles.label}>Topic</label>
@@ -342,22 +373,16 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
             />
           ))}
         </div>
+
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Correct Answer</label>
-          <select
-            name="answer"
-            className={styles.input}
-            value={form.answer}
-            onChange={handleChange}
-          >
+          <select name="answer" className={styles.input} value={form.answer} onChange={handleChange}>
             <option value="">— Select correct answer —</option>
             {form.choices.filter(c => c.trim() !== "").map((c, i) => (
               <option key={i} value={c}>{c}</option>
             ))}
           </select>
-          <p className={styles.fieldHint}>
-            Select which of your choices above is correct.
-          </p>
+          <p className={styles.fieldHint}>Select which of your choices above is correct.</p>
         </div>
 
         <div className={styles.fieldGroup}>
@@ -370,7 +395,6 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
             placeholder="e.g. admintest@gmail.com"
           />
         </div>
-
       </div>
 
       {error && <p className={styles.modalError}>{error}</p>}
@@ -379,6 +403,142 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
         <button className={styles.rowBtn} onClick={onClose}>Cancel</button>
         <button className={styles.actionBtn} onClick={handleSave} disabled={saving}>
           {saving ? "Saving..." : "Save Question"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function EditQuestionModal({ question, topics, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    question:   question.question   || "",
+    difficulty: question.difficulty || "easy",
+    topic:      question.topic      || topics[0] || "",
+    choices:    question.choices?.length === 4
+                  ? question.choices
+                  : [...(question.choices || []), "", "", "", ""].slice(0, 4),
+    answer:     question.answer     || "",
+    createdBy:  question.createdBy  || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState("");
+
+  function handleChange(e) {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  function handleChoiceChange(i, val) {
+    setForm(prev => {
+      const choices = [...prev.choices];
+      const newAnswer = prev.answer === prev.choices[i] ? val : prev.answer;
+      choices[i] = val;
+      return { ...prev, choices, answer: newAnswer };
+    });
+  }
+
+  async function handleSave() {
+    if (!form.question) { setError("Question is required."); return; }
+    const filledChoices = form.choices.filter(c => c.trim() !== "");
+    if (filledChoices.length < 2) { setError("At least 2 choices are required."); return; }
+    if (!form.answer) { setError("Please select the correct answer."); return; }
+    if (!filledChoices.includes(form.answer)) { setError("Correct answer must match one of the choices."); return; }
+
+    setSaving(true);
+    setError("");
+    try {
+      await onSaved({
+        ...question,
+        question:   form.question,
+        difficulty: form.difficulty,
+        topic:      form.topic,
+        choices:    filledChoices,
+        answer:     form.answer,
+        createdBy:  form.createdBy,
+      });
+      onClose();
+    } catch {
+      setError("Failed to save. Try again.");
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title="Edit Question" onClose={onClose}>
+      <div className={styles.modalFields}>
+        <div className={styles.twoCol}>
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>Topic</label>
+            <select name="topic" className={styles.input} value={form.topic} onChange={handleChange}>
+              {topics.map(t => (
+                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>Difficulty</label>
+            <select name="difficulty" className={styles.input} value={form.difficulty} onChange={handleChange}>
+              {DIFFICULTIES.map(d => (
+                <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Question</label>
+          <textarea
+            name="question"
+            className={styles.input}
+            value={form.question}
+            onChange={handleChange}
+            rows={3}
+            style={{ resize: "vertical" }}
+          />
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Choices (A, B, C, D)</label>
+          {form.choices.map((c, i) => (
+            <input
+              key={i}
+              className={styles.input}
+              style={{ marginBottom: 6 }}
+              value={c}
+              onChange={e => handleChoiceChange(i, e.target.value)}
+              placeholder={`Choice ${String.fromCharCode(65 + i)}`}
+            />
+          ))}
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Correct Answer</label>
+          <select name="answer" className={styles.input} value={form.answer} onChange={handleChange}>
+            <option value="">— Select correct answer —</option>
+            {form.choices.filter(c => c.trim() !== "").map((c, i) => (
+              <option key={i} value={c}>{c}</option>
+            ))}
+          </select>
+          <p className={styles.fieldHint}>Select which choice is correct.</p>
+        </div>
+
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>Created By</label>
+          <input
+            name="createdBy"
+            className={styles.input}
+            value={form.createdBy}
+            onChange={handleChange}
+            placeholder="e.g. admintest@gmail.com"
+          />
+        </div>
+      </div>
+
+      {error && <p className={styles.modalError}>{error}</p>}
+
+      <div className={styles.modalActions}>
+        <button className={styles.rowBtn} onClick={onClose}>Cancel</button>
+        <button className={styles.actionBtn} onClick={handleSave} disabled={saving}>
+          {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </Modal>
