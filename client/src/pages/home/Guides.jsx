@@ -231,6 +231,55 @@ function EditGuideModal({ topicId, guide, topics, onClose, onSaved }) {
     });
   }
 
+  async function handleImageUpload(i, file) {
+    if (!file) return;
+
+    updateSection(i, "uploadProgress", 0);
+    updateSection(i, "imageUrl", "");
+
+    const CLOUD_NAME   = "dm8o3i8me";   // name top left
+    const UPLOAD_PRESET = "ufamoy4s"; //preset name
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", UPLOAD_PRESET);
+      formData.append("cloud_name", CLOUD_NAME);
+
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            updateSection(i, "uploadProgress", percent);
+          }
+        });
+
+        xhr.addEventListener("load", () => {
+          if (xhr.status === 200) {
+            const data = JSON.parse(xhr.responseText);
+            updateSection(i, "imageUrl", data.secure_url);
+            updateSection(i, "uploadProgress", null);
+            resolve();
+          } else {
+            reject(new Error("Upload failed"));
+          }
+        });
+
+        xhr.addEventListener("error", () => reject(new Error("Network error")));
+
+        xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
+        xhr.send(formData);
+      });
+
+    } catch (err) {
+      console.error("Upload failed:", err);
+      updateSection(i, "uploadProgress", null);
+      alert("Image upload failed. Try again.");
+    }
+  }
+
   async function handleSave() {
     const filled = sections.filter(s => s.heading.trim() || s.content.trim());
     if (filled.length === 0) {
@@ -304,25 +353,53 @@ function EditGuideModal({ topicId, guide, topics, onClose, onSaved }) {
             </div>
 
             <div className={styles.fieldGroup}>
-              <label className={styles.label}>Image URL <span className={styles.optional}>(optional)</span></label>
+              <label className={styles.label}>
+                Image <span className={styles.optional}>(optional)</span>
+              </label>
+
               <input
-                className={styles.input}
-                value={section.imageUrl}
-                onChange={e => updateSection(i, "imageUrl", e.target.value)}
-                placeholder="https://example.com/image.png"
+                type="file"
+                accept="image/*"
+                className={styles.fileInput}
+                onChange={e => handleImageUpload(i, e.target.files[0])}
               />
-              {section.imageUrl && (
-                <img
-                  src={section.imageUrl}
-                  alt={section.heading || `Section ${i + 1}`}
-                  className={styles.guideSectionImage}
-                />
+
+              {section.uploadProgress != null && (
+                <div>
+                  <div className={styles.progressBar}>
+                    <div
+                      className={styles.progressFill}
+                      style={{ width: `${section.uploadProgress}%` }}
+                    />
+                  </div>
+                  <span className={styles.progressText}>
+                    {section.uploadProgress < 100
+                      ? `Uploading... ${section.uploadProgress}%`
+                      : "Processing..."}
+                  </span>
+                </div>
               )}
-              {section.caption && (
-               <p className={styles.guideSectionCaption}>{section.caption}</p>
+
+              {section.imageUrl && section.uploadProgress == null && (
+                <div className={styles.imagePreviewWrap}>
+                  <img
+                    src={section.imageUrl}
+                    alt="preview"
+                    className={styles.imagePreview}
+                  />
+                  <button
+                    className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+                    onClick={() => {
+                      updateSection(i, "imageUrl", "");
+                      updateSection(i, "caption", "");
+                    }}
+                    title="Remove image"
+                  >✕</button>
+                </div>
               )}
             </div>
-            {section.imageUrl && (
+
+            {section.imageUrl && section.uploadProgress == null && (
               <div className={styles.fieldGroup}>
                 <label className={styles.label}>
                   Caption <span className={styles.optional}>(optional)</span>

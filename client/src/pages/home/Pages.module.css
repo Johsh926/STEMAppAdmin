@@ -320,3 +320,62 @@
   text-align: center;
   margin-top: 4px;
 }
+
+.fileInput {
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  color: #475569;
+  cursor: pointer;
+}
+
+.fileInput::file-selector-button {
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  margin-right: 10px;
+  transition: background 0.15s;
+}
+
+.fileInput::file-selector-button:hover { background: #f1f5f9; }
+
+.progressBar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.progressFill {
+  height: 100%;
+  background: #7c3aed;
+  border-radius: 99px;
+  transition: width 0.3s;
+}
+
+.progressText {
+  font-size: 11px;
+  color: #7c3aed;
+  margin-top: 4px;
+  display: block;
+}
+
+.imagePreviewWrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.imagePreviewWrap .iconBtn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: white;
+}
