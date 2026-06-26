@@ -1,4 +1,4 @@
-import styles from "./pages.module.css";
+import styles from "./Pages.module.css";
 
 export default function Settings() {
   return (

@@ -8,12 +8,14 @@ import Users     from "./Users";
 import Questions from "./Questions";
 import Accounts from "./Accounts";
 import Settings  from "./Settings";
+import Guides from "./Guides";
 import styles from "./Homepage.module.css";
 
 const TABS = [
   { id: "overview",  label: "Overview",  icon: "🏠" },
   { id: "users",     label: "Users",     icon: "👥" },
   { id: "questions", label: "Questions", icon: "📋" },
+  { id: "guides",    label: "Guides",    icon: "📖" },
   { id: "accounts",  label: "Accounts",  icon: "🔑" },
   { id: "settings",  label: "Settings",  icon: "⚙️" },
 ];
@@ -40,6 +42,7 @@ export default function Homepage() {
       case "overview":  return <Overview />;
       case "users":     return <Users />;
       case "questions": return <Questions />;
+      case "guides":    return <Guides />;
       case "accounts":  return <Accounts />;
       case "settings":  return <Settings />;
       default:          return <Overview />;

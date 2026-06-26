@@ -134,3 +134,248 @@
   color: #16a34a;
   margin-top: 8px;
 }
+
+/* ── GUIDES ─────────────────────────────────────────────────────────────────── */
+.guideGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.guideCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guideCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.guideCardTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  text-transform: capitalize;
+}
+
+.guideCardMeta {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 3px;
+}
+
+.guideCardActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── VIEW GUIDE ──────────────────────────────────────────────────────────────── */
+.guideView {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.guideSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.guideSection:last-child {
+  border-bottom: none;
+}
+
+.guideSectionHeading {
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.guideSectionContent {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.guideSectionImage {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-top: 4px;
+}
+
+/* ── SECTION EDITOR ──────────────────────────────────────────────────────────── */
+.sectionEditor {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionEditorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionEditorNum {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7c3aed;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sectionEditorControls {
+  display: flex;
+  gap: 4px;
+}
+
+.iconBtn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  color: #475569;
+}
+
+.iconBtn:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.iconBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.iconBtnDanger:hover:not(:disabled) {
+  border-color: #fecaca;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.addSectionBtn {
+  padding: 10px;
+  border: 1.5px dashed #c4b5fd;
+  border-radius: 8px;
+  background: none;
+  color: #7c3aed;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: background 0.15s;
+  width: 100%;
+}
+
+.addSectionBtn:hover {
+  background: #f5f3ff;
+}
+
+.optional {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.imagePreview {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-top: 6px;
+}
+
+.guideSectionCaption {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.fileInput {
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  color: #475569;
+  cursor: pointer;
+}
+
+.fileInput::file-selector-button {
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  margin-right: 10px;
+  transition: background 0.15s;
+}
+
+.fileInput::file-selector-button:hover { background: #f1f5f9; }
+
+.progressBar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.progressFill {
+  height: 100%;
+  background: #7c3aed;
+  border-radius: 99px;
+  transition: width 0.3s;
+}
+
+.progressText {
+  font-size: 11px;
+  color: #7c3aed;
+  margin-top: 4px;
+  display: block;
+}
+
+.imagePreviewWrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.imagePreviewWrap .iconBtn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: white;
+}

@@ -7,7 +7,7 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../../firebase/firebase";
 import { useAuth } from "../../contexts/authContext";
 import Modal from "../../components/Modal";
-import styles from "./pages.module.css";
+import styles from "./Pages.module.css";
 
 export default function Accounts() {
   const [activeSection, setActiveSection] = useState("teacher");
