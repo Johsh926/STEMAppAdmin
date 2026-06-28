@@ -9,21 +9,33 @@ import { db } from "../../firebase/firebase";
 import styles from "./LoginPage.module.css";
 
 const AdminLogin = () => {
-  const [email, setEmail] = useState(""); //for email
-  const [password, setPassword] = useState(""); //for password
+  const [email, setEmail]               = useState(""); //for email
+  const [password, setPassword]         = useState(""); //for password
   const [showPassword, setShowPassword] = useState(false); //show password
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState("");
+  const [attempts, setAttempts]         = useState(0);
+  const isLocked                        = attempts >= 5;
 
   const { userLoggedIn } = useAuth();
 
   const navigate = useNavigate();
 
   useEffect(() => {
-  if (userLoggedIn) {
-    navigate("/home");
-  }
-}, [userLoggedIn]);
+    if (userLoggedIn) {
+      navigate("/home");
+    }
+  }, [userLoggedIn]);
+
+  useEffect(() => {
+    if (attempts >= 5) {
+      const timer = setTimeout(() => {
+        setAttempts(0);
+        setError("");
+      }, 30000); // 30 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [attempts]);
 
   const handleSubmit = async () => {
     setError("");
@@ -50,6 +62,13 @@ const AdminLogin = () => {
       navigate("/admin/dashboard");
 
     } catch (err) {
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+      if (newAttempts >= 5) {
+        setError("Too many failed attempts. Please wait before trying again.");
+        setLoading(false);
+        return;
+      }
       setError(getErrorMessage(err.code));
       setLoading(false);
     }
@@ -136,7 +155,7 @@ const AdminLogin = () => {
           {/* SUBMIT BUTTON */}
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || isLocked}
             className={`${styles.submitBtn} ${loading ? styles.submitBtnLoading : ""}`}
             type="button"
           >

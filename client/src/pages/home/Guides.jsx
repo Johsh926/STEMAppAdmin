@@ -237,8 +237,8 @@ function EditGuideModal({ topicId, guide, topics, onClose, onSaved }) {
     updateSection(i, "uploadProgress", 0);
     updateSection(i, "imageUrl", "");
 
-    const CLOUD_NAME   = "dm8o3i8me";   // name top left
-    const UPLOAD_PRESET = "ufamoy4s"; //preset name
+    const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;   // name top left
+    const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET; //preset name
 
     try {
       const formData = new FormData();
