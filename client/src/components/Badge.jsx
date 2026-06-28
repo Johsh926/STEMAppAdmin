@@ -1,4 +1,4 @@
-import styles from "./shared.module.css";
+import styles from "./Shared.module.css";
 
 export default function Badge({ color = "gray", children }){
   const colorMap = {
