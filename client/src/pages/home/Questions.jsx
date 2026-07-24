@@ -5,7 +5,7 @@ import { useAuth } from "../../contexts/authContext";
 import Table from "../../components/Table";
 import Badge from "../../components/Badge";
 import Modal from "../../components/Modal";
-import styles from "./pages.module.css";
+import styles from "./Pages.module.css";
 
 const DIFFICULTIES = ["easy", "medium", "hard"];
 

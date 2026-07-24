@@ -23,13 +23,11 @@ export default function Users() {
       getDocs(collection(db, "usernames")),
     ]);
 
-    // Build a map of uid → username from usernames collection
-    // usernames/{username} has a uid field
     const uidToUsername = {};
     usernamesSnap.docs.forEach(d => {
       const data = d.data();
       if (data.uid) {
-        uidToUsername[data.uid] = d.id; // document ID is the username
+        uidToUsername[data.uid] = d.id;
       }
     });
 
@@ -38,7 +36,7 @@ export default function Users() {
         id: d.id,
         col: "users",
         role: "Student",
-        username: uidToUsername[d.id] || "—", // look up username by uid
+        username: uidToUsername[d.id] || "—",
         ...d.data(),
       })),
       ...teachersSnap.docs.map(d => ({
