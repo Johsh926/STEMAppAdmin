@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
-import {
-  collection, getDocs, deleteDoc, doc,
-  addDoc, setDoc, serverTimestamp, orderBy, query,
-} from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, addDoc, setDoc, serverTimestamp, orderBy, query, } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
+import { useAuth } from "../../contexts/authContext";
 import Table from "../../components/Table";
 import Badge from "../../components/Badge";
 import Modal from "../../components/Modal";
-import styles from "./Pages.module.css";
+import styles from "./pages.module.css";
 
 const DIFFICULTIES = ["easy", "medium", "hard"];
+
+const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 export default function Questions() {
   const [questions, setQuestions]               = useState([]);
@@ -112,6 +113,7 @@ export default function Questions() {
           question:  updated.question,
           answer:    updated.answer,
           choices:   updated.choices,
+          imageUrl:  updated.imageUrl || "",
           createdBy: updated.createdBy,
           createdAt: updated.createdAt,
         }
@@ -145,7 +147,6 @@ export default function Questions() {
   return (
     <div className={styles.page}>
 
-      {/* PAGE HEADER */}
       <div className={styles.pageHeader}>
         <div>
           <h2 className={styles.sectionTitle}>Question Bank</h2>
@@ -161,7 +162,6 @@ export default function Questions() {
         </div>
       </div>
 
-      {/* ADD TOPIC INLINE FORM */}
       {showAddTopic && (
         <div className={styles.inlineForm}>
           <input
@@ -187,7 +187,6 @@ export default function Questions() {
         </div>
       )}
 
-      {/* TOPICS DISPLAY */}
       <div className={styles.filterRow}>
         {topics.map(t => (
           <span key={t} className={`${styles.filterBtn} ${styles.topicChip}`}>
@@ -196,7 +195,6 @@ export default function Questions() {
         ))}
       </div>
 
-      {/* FILTERS */}
       <div className={styles.filterRow}>
         <select
           className={styles.filterSelect}
@@ -208,6 +206,7 @@ export default function Questions() {
             <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
           ))}
         </select>
+
         <select
           className={styles.filterSelect}
           value={filterDifficulty}
@@ -220,9 +219,8 @@ export default function Questions() {
         </select>
       </div>
 
-      {/* TABLE */}
       <Table
-        columns={["#", "Question", "Topic", "Difficulty", "Answer", "Actions"]}
+        columns={["#", "Image", "Question", "Topic", "Difficulty", "Answer", "Actions"]}
         loading={loading}
         empty={filtered.length === 0}
         emptyText="No questions found."
@@ -230,6 +228,17 @@ export default function Questions() {
         {filtered.map((q, i) => (
           <tr key={`${q.topic}-${q.difficulty}-${q.id}`}>
             <td className={styles.muted}>{i + 1}</td>
+            <td>
+              {q.imageUrl ? (
+                <img
+                  src={q.imageUrl}
+                  alt="question"
+                  style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0" }}
+                />
+              ) : (
+                <span className={styles.muted}>—</span>
+              )}
+            </td>
             <td className={styles.questionCell}>{q.question || "—"}</td>
             <td><Badge color="purple">{q.topic}</Badge></td>
             <td><Badge color={diffColor(q.difficulty)}>{q.difficulty}</Badge></td>
@@ -252,7 +261,6 @@ export default function Questions() {
         ))}
       </Table>
 
-      {/* MODALS */}
       {showAddModal && (
         <AddQuestionModal
           topics={topics}
@@ -273,15 +281,100 @@ export default function Questions() {
     </div>
   );
 }
+function uploadQuestionImage(file, setForm) {
+  if (!file) return;
+
+  setForm(prev => ({ ...prev, uploadProgress: 0, imageUrl: "" }));
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", UPLOAD_PRESET);
+  formData.append("cloud_name", CLOUD_NAME);
+
+  const xhr = new XMLHttpRequest();
+
+  xhr.upload.addEventListener("progress", (e) => {
+    if (e.lengthComputable) {
+      const percent = Math.round((e.loaded / e.total) * 100);
+      setForm(prev => ({ ...prev, uploadProgress: percent }));
+    }
+  });
+
+  xhr.addEventListener("load", () => {
+    if (xhr.status === 200) {
+      const data = JSON.parse(xhr.responseText);
+      setForm(prev => ({ ...prev, imageUrl: data.secure_url, uploadProgress: null }));
+    } else {
+      setForm(prev => ({ ...prev, uploadProgress: null }));
+      alert("Image upload failed. Try again.");
+    }
+  });
+
+  xhr.addEventListener("error", () => {
+    setForm(prev => ({ ...prev, uploadProgress: null }));
+    alert("Image upload failed. Try again.");
+  });
+
+  xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
+  xhr.send(formData);
+}
+
+function QuestionImageField({ form, setForm }) {
+  return (
+    <div className={styles.fieldGroup}>
+      <label className={styles.label}>
+        Image <span className={styles.optional}>(optional)</span>
+      </label>
+
+      <input
+        type="file"
+        accept="image/*"
+        className={styles.fileInput}
+        onChange={e => uploadQuestionImage(e.target.files[0], setForm)}
+      />
+
+      {form.uploadProgress != null && (
+        <div>
+          <div className={styles.progressBar}>
+            <div
+              className={styles.progressFill}
+              style={{ width: `${form.uploadProgress}%` }}
+            />
+          </div>
+          <span className={styles.progressText}>
+            {form.uploadProgress < 100
+              ? `Uploading... ${form.uploadProgress}%`
+              : "Processing..."}
+          </span>
+        </div>
+      )}
+
+      {form.imageUrl && form.uploadProgress == null && (
+        <div className={styles.imagePreviewWrap}>
+          <img src={form.imageUrl} alt="preview" className={styles.imagePreview} />
+          <button
+            type="button"
+            className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+            onClick={() => setForm(prev => ({ ...prev, imageUrl: "" }))}
+            title="Remove image"
+          >✕</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AddQuestionModal({ topics, onClose, onAdded }) {
+  const { currentUser } = useAuth();
+
   const [form, setForm] = useState({
     question:   "",
     difficulty: "easy",
     topic:      topics[0] || "",
     choices:    ["", "", "", ""],
     answer:     "",
-    createdBy:  "",
+    imageUrl:       "",
+    uploadProgress: null,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
@@ -293,19 +386,34 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
   function handleChoiceChange(i, val) {
     setForm(prev => {
       const choices = [...prev.choices];
-      const newAnswer = prev.answer === prev.choices[i] ? val : prev.answer;
       choices[i] = val;
+      const newAnswer = prev.answer === prev.choices[i] ? val : prev.answer;
       return { ...prev, choices, answer: newAnswer };
     });
   }
 
   async function handleSave() {
-    if (!form.question) { setError("Question is required."); return; }
+    if (!form.question) {
+      setError("Question is required.");
+      return;
+    }
     const filledChoices = form.choices.filter(c => c.trim() !== "");
-    if (filledChoices.length < 2) { setError("At least 2 choices are required."); return; }
-    if (!form.answer) { setError("Please select the correct answer."); return; }
-    if (!filledChoices.includes(form.answer)) { setError("Correct answer must match one of the choices exactly."); return; }
-    if (!form.topic) { setError("Please select a topic."); return; }
+    if (filledChoices.length < 2) {
+      setError("At least 2 choices are required.");
+      return;
+    }
+    if (!form.answer) {
+      setError("Please select the correct answer.");
+      return;
+    }
+    if (!filledChoices.includes(form.answer)) {
+      setError("Correct answer must match one of the choices exactly.");
+      return;
+    }
+    if (!form.topic) {
+      setError("Please select a topic.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -313,7 +421,8 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
         question:  form.question,
         answer:    form.answer,
         choices:   filledChoices,
-        createdBy: form.createdBy,
+        imageUrl:  form.imageUrl || "",
+        createdBy: currentUser?.email || "unknown",
         createdAt: serverTimestamp(),
       });
       onAdded();
@@ -360,6 +469,8 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
           />
         </div>
 
+        <QuestionImageField form={form} setForm={setForm} />
+
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Choices (A, B, C, D)</label>
           {form.choices.map((c, i) => (
@@ -376,24 +487,20 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
 
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Correct Answer</label>
-          <select name="answer" className={styles.input} value={form.answer} onChange={handleChange}>
+          <select
+            name="answer"
+            className={styles.input}
+            value={form.answer}
+            onChange={handleChange}
+          >
             <option value="">— Select correct answer —</option>
             {form.choices.filter(c => c.trim() !== "").map((c, i) => (
               <option key={i} value={c}>{c}</option>
             ))}
           </select>
-          <p className={styles.fieldHint}>Select which of your choices above is correct.</p>
-        </div>
-
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Created By</label>
-          <input
-            name="createdBy"
-            className={styles.input}
-            value={form.createdBy}
-            onChange={handleChange}
-            placeholder="e.g. admintest@gmail.com"
-          />
+          <p className={styles.fieldHint}>
+            Select which of your choices above is correct.
+          </p>
         </div>
       </div>
 
@@ -418,7 +525,8 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
                   ? question.choices
                   : [...(question.choices || []), "", "", "", ""].slice(0, 4),
     answer:     question.answer     || "",
-    createdBy:  question.createdBy  || "",
+    imageUrl:       question.imageUrl || "",
+    uploadProgress: null,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
@@ -437,23 +545,35 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
   }
 
   async function handleSave() {
-    if (!form.question) { setError("Question is required."); return; }
+    if (!form.question) {
+      setError("Question is required.");
+      return;
+    }
     const filledChoices = form.choices.filter(c => c.trim() !== "");
-    if (filledChoices.length < 2) { setError("At least 2 choices are required."); return; }
-    if (!form.answer) { setError("Please select the correct answer."); return; }
-    if (!filledChoices.includes(form.answer)) { setError("Correct answer must match one of the choices."); return; }
+    if (filledChoices.length < 2) {
+      setError("At least 2 choices are required.");
+      return;
+    }
+    if (!form.answer) {
+      setError("Please select the correct answer.");
+      return;
+    }
+    if (!filledChoices.includes(form.answer)) {
+      setError("Correct answer must match one of the choices.");
+      return;
+    }
 
     setSaving(true);
     setError("");
     try {
       await onSaved({
-        ...question,
+        ...question,   
         question:   form.question,
         difficulty: form.difficulty,
         topic:      form.topic,
         choices:    filledChoices,
         answer:     form.answer,
-        createdBy:  form.createdBy,
+        imageUrl:   form.imageUrl || "",
       });
       onClose();
     } catch {
@@ -496,6 +616,8 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
           />
         </div>
 
+        <QuestionImageField form={form} setForm={setForm} />
+
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Choices (A, B, C, D)</label>
           {form.choices.map((c, i) => (
@@ -519,17 +641,6 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
             ))}
           </select>
           <p className={styles.fieldHint}>Select which choice is correct.</p>
-        </div>
-
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Created By</label>
-          <input
-            name="createdBy"
-            className={styles.input}
-            value={form.createdBy}
-            onChange={handleChange}
-            placeholder="e.g. admintest@gmail.com"
-          />
         </div>
       </div>
 

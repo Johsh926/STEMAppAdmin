@@ -92,8 +92,6 @@ export default function Accounts() {
 
 function CreateAccountModal({ type, onClose }) {
   const isTeacher = type === "teacher";
-
-  // adminPassword field is gone — nothing to sign back into anymore
   const [form, setForm] = useState({
     email:    "",
     password: "",
@@ -132,9 +130,6 @@ function CreateAccountModal({ type, onClose }) {
     };
     console.log("Creating account with:", snapshot);
 
-    // Spin up a throwaway Firebase app so the new user's sign-in never
-    // touches the primary `auth` instance — the admin's real session
-    // on `auth` (from firebase.js) stays completely untouched.
     const tempApp  = initializeApp(firebaseConfig, `temp-${Date.now()}`);
     const tempAuth = getAuth(tempApp);
 
@@ -154,9 +149,6 @@ function CreateAccountModal({ type, onClose }) {
           `Refusing empty admin write — email="${snapshot.email}" uid="${newUser.uid}"`
         );
       }
-
-      // This write runs under YOUR admin session on the primary `auth`
-      // instance, since it was never switched — isAdmin() sees you.
       if (isTeacher) {
         await setDoc(doc(db, "teacheraccounts", newUser.uid), {
           uid: newUser.uid, email: snapshot.email, username: snapshot.username,
@@ -182,7 +174,7 @@ function CreateAccountModal({ type, onClose }) {
         setError("Failed to create account. Try again.");
       }
     } finally {
-      await deleteApp(tempApp); // clean up the temporary instance either way
+      await deleteApp(tempApp);
       setSaving(false);
     }
   }
@@ -227,8 +219,6 @@ function CreateAccountModal({ type, onClose }) {
             placeholder="Min. 6 characters"
           />
         </div>
-
-        {/* adminPassword field removed — nothing to restore anymore */}
 
       </div>
 
