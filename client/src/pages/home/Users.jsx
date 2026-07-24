@@ -14,24 +14,52 @@ export default function Users() {
   useEffect(() => { fetchAllUsers(); }, []);
 
   async function fetchAllUsers() {
-    setLoading(true);
-    try {
-      const [usersSnap, teachersSnap, adminsSnap] = await Promise.all([
-        getDocs(collection(db, "users")),
-        getDocs(collection(db, "teacheraccounts")),
-        getDocs(collection(db, "adminaccounts")),
-      ]);
-      setAllUsers([
-        ...usersSnap.docs.map(d    => ({ id: d.id, col: "users",           role: "Student", ...d.data() })),
-        ...teachersSnap.docs.map(d => ({ id: d.id, col: "teacheraccounts", role: "Teacher", ...d.data() })),
-        ...adminsSnap.docs.map(d   => ({ id: d.id, col: "adminaccounts",   role: "Admin",   ...d.data() })),
-      ]);
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-    } finally {
-      setLoading(false);
-    }
+  setLoading(true);
+  try {
+    const [usersSnap, teachersSnap, adminsSnap, usernamesSnap] = await Promise.all([
+      getDocs(collection(db, "users")),
+      getDocs(collection(db, "teacheraccounts")),
+      getDocs(collection(db, "adminaccounts")),
+      getDocs(collection(db, "usernames")),
+    ]);
+
+    // Build a map of uid → username from usernames collection
+    // usernames/{username} has a uid field
+    const uidToUsername = {};
+    usernamesSnap.docs.forEach(d => {
+      const data = d.data();
+      if (data.uid) {
+        uidToUsername[data.uid] = d.id; // document ID is the username
+      }
+    });
+
+    setAllUsers([
+      ...usersSnap.docs.map(d => ({
+        id: d.id,
+        col: "users",
+        role: "Student",
+        username: uidToUsername[d.id] || "—", // look up username by uid
+        ...d.data(),
+      })),
+      ...teachersSnap.docs.map(d => ({
+        id: d.id,
+        col: "teacheraccounts",
+        role: "Teacher",
+        ...d.data(),
+      })),
+      ...adminsSnap.docs.map(d => ({
+        id: d.id,
+        col: "adminaccounts",
+        role: "Admin",
+        ...d.data(),
+      })),
+    ]);
+  } catch (err) {
+    console.error("Failed to fetch users:", err);
+  } finally {
+    setLoading(false);
   }
+}
 
   async function handleDelete(userId, userCol) {
     if (!window.confirm(

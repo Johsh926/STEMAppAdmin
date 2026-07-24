@@ -1,11 +1,8 @@
 import { useState } from "react";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+import { initializeApp, deleteApp } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "../../firebase/firebase";
-import { useAuth } from "../../contexts/authContext";
+import { db, firebaseConfig } from "../../firebase/firebase";
 import Modal from "../../components/Modal";
 import styles from "./Pages.module.css";
 
@@ -94,9 +91,9 @@ export default function Accounts() {
 }
 
 function CreateAccountModal({ type, onClose }) {
-  const { currentUser } = useAuth();
   const isTeacher = type === "teacher";
 
+  // adminPassword field is gone — nothing to sign back into anymore
   const [form, setForm] = useState({
     email:    "",
     password: "",
@@ -128,47 +125,64 @@ function CreateAccountModal({ type, onClose }) {
     setError("");
     setSuccess("");
 
-    const adminEmail    = currentUser.email;
-    const adminPassword = form.adminPassword;
+    const snapshot = {
+      email:    form.email,
+      username: form.username,
+      password: form.password,
+    };
+    console.log("Creating account with:", snapshot);
+
+    // Spin up a throwaway Firebase app so the new user's sign-in never
+    // touches the primary `auth` instance — the admin's real session
+    // on `auth` (from firebase.js) stays completely untouched.
+    const tempApp  = initializeApp(firebaseConfig, `temp-${Date.now()}`);
+    const tempAuth = getAuth(tempApp);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        form.email,
-        form.password
+        tempAuth, snapshot.email, snapshot.password
       );
       const newUser = userCredential.user;
+
+      if (isTeacher && (!snapshot.email || !snapshot.username || !newUser.uid)) {
+        throw new Error(
+          `Refusing empty teacher write — email="${snapshot.email}" username="${snapshot.username}" uid="${newUser.uid}"`
+        );
+      }
+      if (!isTeacher && (!snapshot.email || !newUser.uid)) {
+        throw new Error(
+          `Refusing empty admin write — email="${snapshot.email}" uid="${newUser.uid}"`
+        );
+      }
+
+      // This write runs under YOUR admin session on the primary `auth`
+      // instance, since it was never switched — isAdmin() sees you.
       if (isTeacher) {
         await setDoc(doc(db, "teacheraccounts", newUser.uid), {
-          uid:       newUser.uid,
-          email:     form.email,
-          username:  form.username,
-          status:    "active",
-          createdAt: serverTimestamp(),
+          uid: newUser.uid, email: snapshot.email, username: snapshot.username,
+          status: "active", createdAt: serverTimestamp(),
         });
       } else {
         await setDoc(doc(db, "adminaccounts", newUser.uid), {
-          uid:        newUser.uid,
-          admin_email: form.email,
-          role:       "admin",
-          createdAt:  serverTimestamp(),
+          uid: newUser.uid, admin_email: snapshot.email,
+          role: "admin", createdAt: serverTimestamp(),
         });
       }
-      await signInWithEmailAndPassword(auth, adminEmail, form.adminPassword);
 
       setSuccess(`${isTeacher ? "Teacher" : "Admin"} account created successfully!`);
-      setForm({ email: "", password: "", username: "", adminPassword: "" });
+      setForm({ email: "", password: "", username: "" });
 
     } catch (err) {
-      console.error(err);
+      console.error("Account creation failed:", err);
       if (err.code === "auth/email-already-in-use") {
         setError("This email is already registered.");
-      } else if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        setError("Wrong admin password. Could not restore admin session.");
+      } else if (err.message?.startsWith("Refusing empty")) {
+        setError("Internal error — form was empty. Check the console for details.");
       } else {
         setError("Failed to create account. Try again.");
       }
     } finally {
+      await deleteApp(tempApp); // clean up the temporary instance either way
       setSaving(false);
     }
   }
@@ -214,20 +228,7 @@ function CreateAccountModal({ type, onClose }) {
           />
         </div>
 
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>Your Admin Password</label>
-          <p className={styles.fieldHint}>
-            Required to restore your admin session after creating the account.
-          </p>
-          <input
-            name="adminPassword"
-            type="password"
-            className={styles.input}
-            value={form.adminPassword || ""}
-            onChange={handleChange}
-            placeholder="Your current admin password"
-          />
-        </div>
+        {/* adminPassword field removed — nothing to restore anymore */}
 
       </div>
 

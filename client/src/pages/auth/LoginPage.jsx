@@ -2,9 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/authContext";
 import { doSignInWithEmailAndPassword, doSignOut } from "../../firebase/auth";
-
 import { doc, getDoc } from "firebase/firestore";
-
 import { db } from "../../firebase/firebase";
 import styles from "./LoginPage.module.css";
 
@@ -16,16 +14,15 @@ const AdminLogin = () => {
   const [error, setError]               = useState("");
   const [attempts, setAttempts]         = useState(0);
   const isLocked                        = attempts >= 5;
-
-  const { userLoggedIn } = useAuth();
+  const { userLoggedIn, userRole }      = useAuth();
 
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (userLoggedIn) {
-      navigate("/home");
+  if (userLoggedIn && userRole) {  
+    navigate("/home");
     }
-  }, [userLoggedIn]);
+  }, [userLoggedIn, userRole]);
 
   useEffect(() => {
     if (attempts >= 5) {
@@ -38,41 +35,55 @@ const AdminLogin = () => {
   }, [attempts]);
 
   const handleSubmit = async () => {
-    setError("");
+  setError("");
+  if (!email || !password) { setError("Please fill all fields."); return; }
+  setLoading(true);
 
-    if (!email || !password) {
-      setError("Please fill all fields.");
+  try {
+    const userCredential = await doSignInWithEmailAndPassword(email, password);
+    const user = userCredential.user;
+
+    const adminSnap = await getDoc(doc(db, "adminaccounts", user.uid));
+    if (adminSnap.exists()) {
+      if (adminSnap.data().status === "inactive") {
+        await doSignOut();
+        setError("This account has been deactivated.");
+        setLoading(false);
+        return;
+      }
+      navigate("/home");
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const userCredential = await doSignInWithEmailAndPassword(email, password);
-      const user = userCredential.user;
-      const adminRef = doc(db, "adminaccounts", user.uid);
-      const adminSnap = await getDoc(adminRef);
-
-      if (!adminSnap.exists()) {
-        await doSignOut(); // imported below
-        setError("Access denied. This account is not an admin.");
+    const teacherSnap = await getDoc(doc(db, "teacheraccounts", user.uid));
+    if (teacherSnap.exists()) {
+      if (teacherSnap.data().status === "inactive") {
+        await doSignOut();
+        setError("This account has been deactivated. Contact an admin.");
         setLoading(false);
         return;
       }
-      navigate("/admin/dashboard");
-
-    } catch (err) {
-      const newAttempts = attempts + 1;
-      setAttempts(newAttempts);
-      if (newAttempts >= 5) {
-        setError("Too many failed attempts. Please wait before trying again.");
-        setLoading(false);
-        return;
-      }
-      setError(getErrorMessage(err.code));
-      setLoading(false);
+      navigate("/home");
+      return;
     }
-  };
+
+    await doSignOut();
+    setError("Access denied. This account does not have portal access.");
+    setLoading(false);
+
+  } catch (err) {
+    const newAttempts = attempts + 1;
+    setAttempts(newAttempts);
+    if (newAttempts >= 5) {
+      setError("Too many failed attempts. Please wait 30 seconds.");
+      setLoading(false);
+      return;
+    }
+    setError(getErrorMessage(err.code));
+    setLoading(false);
+  }
+};
+
   function getErrorMessage(code) {
     switch (code) {
       case "auth/invalid-credential":
