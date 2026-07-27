@@ -1,20 +1,27 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs, deleteDoc, doc, addDoc, setDoc, serverTimestamp, orderBy, query, } from "firebase/firestore";
+import {
+  collection, getDocs, deleteDoc, doc,
+  addDoc, setDoc, serverTimestamp, orderBy, query,
+} from "firebase/firestore";
 import { db } from "../../firebase/firebase";
 import { useAuth } from "../../contexts/authContext";
+import { logAction } from "../../firebase/logs";
 import Table from "../../components/Table";
 import Badge from "../../components/Badge";
 import Modal from "../../components/Modal";
 import styles from "./Pages.module.css";
 
 const DIFFICULTIES = ["easy", "medium", "hard"];
-
 const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 export default function Questions() {
+  const { currentUser, userRole } = useAuth();
+  const actor = { uid: currentUser?.uid, email: currentUser?.email, role: userRole };
+
   const [questions, setQuestions]               = useState([]);
-  const [topics, setTopics]                     = useState([]);
+  const [topics, setTopics]                     = useState([]);      // unchanged shape: array of id strings
+  const [topicMeta, setTopicMeta]               = useState({});      // NEW: { [id]: { title, createdAt } }, display-only
   const [loading, setLoading]                   = useState(true);
   const [showAddModal, setShowAddModal]         = useState(false);
   const [showAddTopic, setShowAddTopic]         = useState(false);
@@ -26,16 +33,17 @@ export default function Questions() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  async function fetchTopics() {
-    const snap = await getDocs(collection(db, "questions"));
-    return snap.docs.map(d => d.id);
-  }
-
   async function fetchAll() {
     setLoading(true);
     try {
-      const topicList = await fetchTopics();
+      // One read gives us both the id list (used everywhere downstream
+      // exactly as before) and the metadata map (title/createdAt) for display.
+      const topicsSnap = await getDocs(collection(db, "questions"));
+      const topicList = topicsSnap.docs.map(d => d.id);
+      const metaMap = {};
+      topicsSnap.docs.forEach(d => { metaMap[d.id] = d.data(); });
       setTopics(topicList);
+      setTopicMeta(metaMap);
 
       const allQuestions = [];
       await Promise.all(
@@ -85,6 +93,11 @@ export default function Questions() {
         createdAt: serverTimestamp(),
       });
       setTopics(prev => [...prev, cleaned]);
+      setTopicMeta(prev => ({
+        ...prev,
+        [cleaned]: { title: newTopic.trim(), createdAt: new Date() }, // optimistic; real Timestamp lands on next fetchAll
+      }));
+      logAction(actor, "create_topic", `Created new topic: "${newTopic.trim()}"`);
       setNewTopic("");
       setShowAddTopic(false);
     } catch (err) {
@@ -95,11 +108,64 @@ export default function Questions() {
     }
   }
 
-  async function handleDelete(questionId, topic, difficulty) {
+  // Deleting a topic means deleting three things: every question document
+  // in its easy/medium/hard subcollections, the topic document itself, and
+  // its guide (if one exists). Firestore does not cascade this on its own —
+  // deleting just the parent doc would leave orphaned questions behind,
+  // still taking up storage and permanently unreachable through this UI.
+  async function handleDeleteTopic(topicId) {
+    const title = topicMeta[topicId]?.title || topicId;
+    const affectedCount = questions.filter(q => q.topic === topicId).length;
+
+    const confirmed = window.confirm(
+      `Delete topic "${title}"?\n\n` +
+      `This permanently deletes ${affectedCount} question${affectedCount !== 1 ? "s" : ""} ` +
+      `across all difficulties, and its guide if one exists.\n\n` +
+      `This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    try {
+      // 1. Delete every question doc across all three difficulty subcollections
+      await Promise.all(
+        DIFFICULTIES.map(async (difficulty) => {
+          const snap = await getDocs(collection(db, "questions", topicId, difficulty));
+          await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+        })
+      );
+
+      // 2. Delete the topic document itself
+      await deleteDoc(doc(db, "questions", topicId));
+
+      // 3. Delete the associated guide — safe no-op if none exists,
+      //    Firestore does not error on deleting a nonexistent document
+      await deleteDoc(doc(db, "guides", topicId));
+
+      setTopics(prev => prev.filter(t => t !== topicId));
+      setTopicMeta(prev => {
+        const updated = { ...prev };
+        delete updated[topicId];
+        return updated;
+      });
+      setQuestions(prev => prev.filter(q => q.topic !== topicId));
+      if (filterTopic === topicId) setFilterTopic("all");
+
+      logAction(actor, "delete_topic",
+        `Deleted topic "${title}" (${affectedCount} question${affectedCount !== 1 ? "s" : ""}, guide included if present)`);
+
+    } catch (err) {
+      console.error("Failed to delete topic:", err);
+      alert("Failed to delete topic. Check the console for details.");
+    }
+  }
+
+  async function handleDelete(question) {
     if (!window.confirm("Delete this question?")) return;
     try {
-      await deleteDoc(doc(db, "questions", topic, difficulty, questionId));
-      setQuestions(prev => prev.filter(q => q.id !== questionId));
+      await deleteDoc(doc(db, "questions", question.topic, question.difficulty, question.id));
+      setQuestions(prev => prev.filter(q => q.id !== question.id));
+      logAction(actor, "delete_question",
+        `Deleted question in ${question.topic}/${question.difficulty}: "${(question.question || "").slice(0, 60)}"`);
     } catch (err) {
       console.error("Delete failed:", err);
     }
@@ -125,6 +191,8 @@ export default function Questions() {
             : q
         )
       );
+      logAction(actor, "edit_question",
+        `Edited question in ${updated.topic}/${updated.difficulty}: "${(updated.question || "").slice(0, 60)}"`);
     } catch (err) {
       console.error("Edit failed:", err);
       throw err;
@@ -187,12 +255,34 @@ export default function Questions() {
         </div>
       )}
 
-      <div className={styles.filterRow}>
-        {topics.map(t => (
-          <span key={t} className={`${styles.filterBtn} ${styles.topicChip}`}>
-            <Badge color="purple">{t}</Badge>
-          </span>
-        ))}
+      {/* Manage Topics — name, created date, question count, and delete */}
+      <div className={styles.topicManageGrid}>
+        {topics.map(t => {
+          const meta = topicMeta[t] || {};
+          const created = meta.createdAt?.toDate
+            ? meta.createdAt.toDate().toLocaleDateString()
+            : meta.createdAt instanceof Date
+              ? meta.createdAt.toLocaleDateString()
+              : "—";
+          const questionCount = questions.filter(q => q.topic === t).length;
+
+          return (
+            <div key={t} className={styles.topicManageChip}>
+              <Badge color="purple">{meta.title || t}</Badge>
+              <span className={styles.topicManageDate}>
+                Created {created} · {questionCount} question{questionCount !== 1 ? "s" : ""}
+              </span>
+              <button
+                className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
+                onClick={() => handleDeleteTopic(t)}
+                title={`Delete topic "${meta.title || t}"`}
+              >✕</button>
+            </div>
+          );
+        })}
+        {topics.length === 0 && (
+          <p className={styles.muted}>No topics yet — click "+ Add Topic" to create one.</p>
+        )}
       </div>
 
       <div className={styles.filterRow}>
@@ -244,15 +334,12 @@ export default function Questions() {
             <td><Badge color={diffColor(q.difficulty)}>{q.difficulty}</Badge></td>
             <td className={styles.muted}>{q.answer || "—"}</td>
             <td className={styles.actions}>
-              <button
-                className={styles.rowBtn}
-                onClick={() => setEditingQuestion(q)}
-              >
+              <button className={styles.rowBtn} onClick={() => setEditingQuestion(q)}>
                 Edit
               </button>
               <button
                 className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
-                onClick={() => handleDelete(q.id, q.topic, q.difficulty)}
+                onClick={() => handleDelete(q)}
               >
                 Delete
               </button>
@@ -281,9 +368,9 @@ export default function Questions() {
     </div>
   );
 }
+
 function uploadQuestionImage(file, setForm) {
   if (!file) return;
-
   setForm(prev => ({ ...prev, uploadProgress: 0, imageUrl: "" }));
 
   const formData = new FormData();
@@ -292,14 +379,12 @@ function uploadQuestionImage(file, setForm) {
   formData.append("cloud_name", CLOUD_NAME);
 
   const xhr = new XMLHttpRequest();
-
   xhr.upload.addEventListener("progress", (e) => {
     if (e.lengthComputable) {
       const percent = Math.round((e.loaded / e.total) * 100);
       setForm(prev => ({ ...prev, uploadProgress: percent }));
     }
   });
-
   xhr.addEventListener("load", () => {
     if (xhr.status === 200) {
       const data = JSON.parse(xhr.responseText);
@@ -309,12 +394,10 @@ function uploadQuestionImage(file, setForm) {
       alert("Image upload failed. Try again.");
     }
   });
-
   xhr.addEventListener("error", () => {
     setForm(prev => ({ ...prev, uploadProgress: null }));
     alert("Image upload failed. Try again.");
   });
-
   xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
   xhr.send(formData);
 }
@@ -325,30 +408,22 @@ function QuestionImageField({ form, setForm }) {
       <label className={styles.label}>
         Image <span className={styles.optional}>(optional)</span>
       </label>
-
       <input
         type="file"
         accept="image/*"
         className={styles.fileInput}
         onChange={e => uploadQuestionImage(e.target.files[0], setForm)}
       />
-
       {form.uploadProgress != null && (
         <div>
           <div className={styles.progressBar}>
-            <div
-              className={styles.progressFill}
-              style={{ width: `${form.uploadProgress}%` }}
-            />
+            <div className={styles.progressFill} style={{ width: `${form.uploadProgress}%` }} />
           </div>
           <span className={styles.progressText}>
-            {form.uploadProgress < 100
-              ? `Uploading... ${form.uploadProgress}%`
-              : "Processing..."}
+            {form.uploadProgress < 100 ? `Uploading... ${form.uploadProgress}%` : "Processing..."}
           </span>
         </div>
       )}
-
       {form.imageUrl && form.uploadProgress == null && (
         <div className={styles.imagePreviewWrap}>
           <img src={form.imageUrl} alt="preview" className={styles.imagePreview} />
@@ -365,16 +440,13 @@ function QuestionImageField({ form, setForm }) {
 }
 
 function AddQuestionModal({ topics, onClose, onAdded }) {
-  const { currentUser } = useAuth();
+  const { currentUser, userRole } = useAuth();
+  const actor = { uid: currentUser?.uid, email: currentUser?.email, role: userRole };
 
   const [form, setForm] = useState({
-    question:   "",
-    difficulty: "easy",
-    topic:      topics[0] || "",
-    choices:    ["", "", "", ""],
-    answer:     "",
-    imageUrl:       "",
-    uploadProgress: null,
+    question: "", difficulty: "easy", topic: topics[0] || "",
+    choices: ["", "", "", ""], answer: "",
+    imageUrl: "", uploadProgress: null,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
@@ -393,27 +465,12 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
   }
 
   async function handleSave() {
-    if (!form.question) {
-      setError("Question is required.");
-      return;
-    }
+    if (!form.question) { setError("Question is required."); return; }
     const filledChoices = form.choices.filter(c => c.trim() !== "");
-    if (filledChoices.length < 2) {
-      setError("At least 2 choices are required.");
-      return;
-    }
-    if (!form.answer) {
-      setError("Please select the correct answer.");
-      return;
-    }
-    if (!filledChoices.includes(form.answer)) {
-      setError("Correct answer must match one of the choices exactly.");
-      return;
-    }
-    if (!form.topic) {
-      setError("Please select a topic.");
-      return;
-    }
+    if (filledChoices.length < 2) { setError("At least 2 choices are required."); return; }
+    if (!form.answer) { setError("Please select the correct answer."); return; }
+    if (!filledChoices.includes(form.answer)) { setError("Correct answer must match one of the choices exactly."); return; }
+    if (!form.topic) { setError("Please select a topic."); return; }
 
     setSaving(true);
     try {
@@ -425,6 +482,8 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
         createdBy: currentUser?.email || "unknown",
         createdAt: serverTimestamp(),
       });
+      logAction(actor, "create_question",
+        `Created question in ${form.topic}/${form.difficulty}: "${form.question.slice(0, 60)}"`);
       onAdded();
       onClose();
     } catch (err) {
@@ -441,17 +500,13 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
           <div className={styles.fieldGroup}>
             <label className={styles.label}>Topic</label>
             <select name="topic" className={styles.input} value={form.topic} onChange={handleChange}>
-              {topics.map(t => (
-                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-              ))}
+              {topics.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
             </select>
           </div>
           <div className={styles.fieldGroup}>
             <label className={styles.label}>Difficulty</label>
             <select name="difficulty" className={styles.input} value={form.difficulty} onChange={handleChange}>
-              {DIFFICULTIES.map(d => (
-                <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-              ))}
+              {DIFFICULTIES.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
             </select>
           </div>
         </div>
@@ -459,13 +514,8 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Question</label>
           <textarea
-            name="question"
-            className={styles.input}
-            value={form.question}
-            onChange={handleChange}
-            placeholder="Enter the question..."
-            rows={3}
-            style={{ resize: "vertical" }}
+            name="question" className={styles.input} value={form.question} onChange={handleChange}
+            placeholder="Enter the question..." rows={3} style={{ resize: "vertical" }}
           />
         </div>
 
@@ -475,10 +525,7 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
           <label className={styles.label}>Choices (A, B, C, D)</label>
           {form.choices.map((c, i) => (
             <input
-              key={i}
-              className={styles.input}
-              style={{ marginBottom: 6 }}
-              value={c}
+              key={i} className={styles.input} style={{ marginBottom: 6 }} value={c}
               onChange={e => handleChoiceChange(i, e.target.value)}
               placeholder={`Choice ${String.fromCharCode(65 + i)}`}
             />
@@ -487,20 +534,11 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
 
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Correct Answer</label>
-          <select
-            name="answer"
-            className={styles.input}
-            value={form.answer}
-            onChange={handleChange}
-          >
+          <select name="answer" className={styles.input} value={form.answer} onChange={handleChange}>
             <option value="">— Select correct answer —</option>
-            {form.choices.filter(c => c.trim() !== "").map((c, i) => (
-              <option key={i} value={c}>{c}</option>
-            ))}
+            {form.choices.filter(c => c.trim() !== "").map((c, i) => <option key={i} value={c}>{c}</option>)}
           </select>
-          <p className={styles.fieldHint}>
-            Select which of your choices above is correct.
-          </p>
+          <p className={styles.fieldHint}>Select which of your choices above is correct.</p>
         </div>
       </div>
 
@@ -545,35 +583,19 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
   }
 
   async function handleSave() {
-    if (!form.question) {
-      setError("Question is required.");
-      return;
-    }
+    if (!form.question) { setError("Question is required."); return; }
     const filledChoices = form.choices.filter(c => c.trim() !== "");
-    if (filledChoices.length < 2) {
-      setError("At least 2 choices are required.");
-      return;
-    }
-    if (!form.answer) {
-      setError("Please select the correct answer.");
-      return;
-    }
-    if (!filledChoices.includes(form.answer)) {
-      setError("Correct answer must match one of the choices.");
-      return;
-    }
+    if (filledChoices.length < 2) { setError("At least 2 choices are required."); return; }
+    if (!form.answer) { setError("Please select the correct answer."); return; }
+    if (!filledChoices.includes(form.answer)) { setError("Correct answer must match one of the choices."); return; }
 
     setSaving(true);
     setError("");
     try {
       await onSaved({
-        ...question,   
-        question:   form.question,
-        difficulty: form.difficulty,
-        topic:      form.topic,
-        choices:    filledChoices,
-        answer:     form.answer,
-        imageUrl:   form.imageUrl || "",
+        ...question,
+        question: form.question, difficulty: form.difficulty, topic: form.topic,
+        choices: filledChoices, answer: form.answer, imageUrl: form.imageUrl || "",
       });
       onClose();
     } catch {
@@ -589,17 +611,13 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
           <div className={styles.fieldGroup}>
             <label className={styles.label}>Topic</label>
             <select name="topic" className={styles.input} value={form.topic} onChange={handleChange}>
-              {topics.map(t => (
-                <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-              ))}
+              {topics.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
             </select>
           </div>
           <div className={styles.fieldGroup}>
             <label className={styles.label}>Difficulty</label>
             <select name="difficulty" className={styles.input} value={form.difficulty} onChange={handleChange}>
-              {DIFFICULTIES.map(d => (
-                <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-              ))}
+              {DIFFICULTIES.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
             </select>
           </div>
         </div>
@@ -607,12 +625,8 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Question</label>
           <textarea
-            name="question"
-            className={styles.input}
-            value={form.question}
-            onChange={handleChange}
-            rows={3}
-            style={{ resize: "vertical" }}
+            name="question" className={styles.input} value={form.question} onChange={handleChange}
+            rows={3} style={{ resize: "vertical" }}
           />
         </div>
 
@@ -622,10 +636,7 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
           <label className={styles.label}>Choices (A, B, C, D)</label>
           {form.choices.map((c, i) => (
             <input
-              key={i}
-              className={styles.input}
-              style={{ marginBottom: 6 }}
-              value={c}
+              key={i} className={styles.input} style={{ marginBottom: 6 }} value={c}
               onChange={e => handleChoiceChange(i, e.target.value)}
               placeholder={`Choice ${String.fromCharCode(65 + i)}`}
             />
@@ -636,9 +647,7 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
           <label className={styles.label}>Correct Answer</label>
           <select name="answer" className={styles.input} value={form.answer} onChange={handleChange}>
             <option value="">— Select correct answer —</option>
-            {form.choices.filter(c => c.trim() !== "").map((c, i) => (
-              <option key={i} value={c}>{c}</option>
-            ))}
+            {form.choices.filter(c => c.trim() !== "").map((c, i) => <option key={i} value={c}>{c}</option>)}
           </select>
           <p className={styles.fieldHint}>Select which choice is correct.</p>
         </div>
