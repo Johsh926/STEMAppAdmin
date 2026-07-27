@@ -2,11 +2,16 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db, auth } from "../../firebase/firebase";
 import { sendPasswordResetEmail } from "firebase/auth";
+import { useAuth } from "../../contexts/authContext";
+import { logAction } from "../../firebase/logs";
 import Table from "../../components/Table";
 import Badge from "../../components/Badge";
 import styles from "./Pages.module.css";
 
 export default function Users() {
+  const { currentUser, userRole } = useAuth();
+  const actor = { uid: currentUser?.uid, email: currentUser?.email, role: userRole };
+
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [filter, setFilter]     = useState("all");
@@ -14,50 +19,36 @@ export default function Users() {
   useEffect(() => { fetchAllUsers(); }, []);
 
   async function fetchAllUsers() {
-  setLoading(true);
-  try {
-    const [usersSnap, teachersSnap, adminsSnap, usernamesSnap] = await Promise.all([
-      getDocs(collection(db, "users")),
-      getDocs(collection(db, "teacheraccounts")),
-      getDocs(collection(db, "adminaccounts")),
-      getDocs(collection(db, "usernames")),
-    ]);
+    setLoading(true);
+    try {
+      const [usersSnap, teachersSnap, adminsSnap, usernamesSnap] = await Promise.all([
+        getDocs(collection(db, "users")),
+        getDocs(collection(db, "teacheraccounts")),
+        getDocs(collection(db, "adminaccounts")),
+        getDocs(collection(db, "usernames")),
+      ]);
 
-    const uidToUsername = {};
-    usernamesSnap.docs.forEach(d => {
-      const data = d.data();
-      if (data.uid) {
-        uidToUsername[data.uid] = d.id;
-      }
-    });
+      const uidToUsername = {};
+      usernamesSnap.docs.forEach(d => {
+        const data = d.data();
+        if (data.uid) uidToUsername[data.uid] = d.id;
+      });
 
-    setAllUsers([
-      ...usersSnap.docs.map(d => ({
-        id: d.id,
-        col: "users",
-        role: "Student",
-        username: uidToUsername[d.id] || "—",
-        ...d.data(),
-      })),
-      ...teachersSnap.docs.map(d => ({
-        id: d.id,
-        col: "teacheraccounts",
-        role: "Teacher",
-        ...d.data(),
-      })),
-      ...adminsSnap.docs.map(d => ({
-        id: d.id,
-        col: "adminaccounts",
-        role: "Admin",
-        ...d.data(),
-      })),
-    ]);
-  } catch (err) {
-    console.error("Failed to fetch users:", err);
-  } finally {
-    setLoading(false);
+      setAllUsers([
+        ...usersSnap.docs.map(d => ({
+          id: d.id, col: "users", role: "Student",
+          ...d.data(),
+          username: uidToUsername[d.id] || "—",
+        })),
+        ...teachersSnap.docs.map(d => ({ id: d.id, col: "teacheraccounts", role: "Teacher", ...d.data() })),
+        ...adminsSnap.docs.map(d => ({ id: d.id, col: "adminaccounts", role: "Admin", ...d.data() })),
+      ]);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   async function handleDelete(userId, userCol) {
     if (!window.confirm(
@@ -65,9 +56,12 @@ export default function Users() {
       "IMPORTANT: You must also manually delete their account from " +
       "Firebase Console → Authentication → Users to fully remove access."
     )) return;
+    const target = allUsers.find(u => u.id === userId);
     try {
       await deleteDoc(doc(db, userCol, userId));
       setAllUsers(prev => prev.filter(u => u.id !== userId));
+      logAction(actor, "remove_user",
+        `Removed ${target?.role || userCol} "${target?.username || target?.email || userId}" from ${userCol}`);
     } catch (err) {
       console.error(err);
     }
@@ -78,6 +72,8 @@ export default function Users() {
     try {
       await updateDoc(doc(db, user.col, user.id), { status: newStatus });
       setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
+      logAction(actor, newStatus === "inactive" ? "deactivate_user" : "activate_user",
+        `${newStatus === "inactive" ? "Deactivated" : "Activated"} ${user.role} "${user.username || user.email}"`);
     } catch (err) {
       console.error(err);
     }
@@ -88,15 +84,14 @@ export default function Users() {
     try {
       await sendPasswordResetEmail(auth, email);
       alert(`Password reset email sent to ${email}`);
+      logAction(actor, "reset_password", `Sent password reset email to ${email}`);
     } catch (err) {
       console.error(err);
       alert("Failed to send reset email.");
     }
   }
 
-  const filtered = filter === "all"
-    ? allUsers
-    : allUsers.filter(u => u.role.toLowerCase() === filter);
+  const filtered = filter === "all" ? allUsers : allUsers.filter(u => u.role.toLowerCase() === filter);
 
   function roleBadgeColor(role) {
     if (role === "Teacher") return "purple";
@@ -122,9 +117,7 @@ export default function Users() {
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
             <span className={styles.filterCount}>
-              {f === "all"
-                ? allUsers.length
-                : allUsers.filter(u => u.role.toLowerCase() === f).length}
+              {f === "all" ? allUsers.length : allUsers.filter(u => u.role.toLowerCase() === f).length}
             </span>
           </button>
         ))}
@@ -150,10 +143,7 @@ export default function Users() {
               {u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : "—"}
             </td>
             <td className={styles.actions}>
-              <button
-                className={styles.rowBtn}
-                onClick={() => handleToggleStatus(u)}
-              >
+              <button className={styles.rowBtn} onClick={() => handleToggleStatus(u)}>
                 {u.status === "inactive" ? "Activate" : "Deactivate"}
               </button>
               <button

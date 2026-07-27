@@ -7,14 +7,18 @@ import { db } from "../../firebase/firebase";
 import Modal from "../../components/Modal";
 import Badge from "../../components/Badge";
 import styles from "./Pages.module.css";
+import { useAuth } from "../../contexts/authContext";
+import { logAction } from "../../firebase/logs";
 
 export default function Guides() {
-  const [topics, setTopics]           = useState([]);
-  const [guides, setGuides]           = useState({});
-  const [loading, setLoading]         = useState(true);
+  const [topics, setTopics]               = useState([]);
+  const [guides, setGuides]               = useState({});
+  const [loading, setLoading]             = useState(true);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [editingGuide, setEditingGuide]   = useState(null);
   const [viewingGuide, setViewingGuide]   = useState(null);
+  const { currentUser, userRole }         = useAuth();
+  const actor = { uid: currentUser?.uid, email: currentUser?.email, role: userRole };
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -39,20 +43,24 @@ export default function Guides() {
   }
 
   async function handleDelete(topicId) {
-    if (!window.confirm("Delete this guide?")) return;
-    try {
-      await deleteDoc(doc(db, "guides", topicId));
-      setGuides(prev => {
-        const updated = { ...prev };
-        delete updated[topicId];
-        return updated;
-      });
+  if (!window.confirm("Delete this guide?")) return;
+  const topicTitle = topics.find(t => t.id === topicId)?.title || topicId; // read before it's gone
+  try {
+    await deleteDoc(doc(db, "guides", topicId));
+    setGuides(prev => {
+      const updated = { ...prev };
+      delete updated[topicId];
+      return updated; // pure — just returns the new state, no side effects inside
+    });
+      logAction(actor, "delete_guide", `Deleted guide for "${topicTitle}"`); // fires once, after the write succeeds
     } catch (err) {
       console.error("Delete failed:", err);
     }
   }
 
   async function handleSave(topicId, data) {
+    const isNewGuide = !guides[topicId]; // must be read before setDoc/setGuides run
+
     await setDoc(doc(db, "guides", topicId), {
       ...data,
       topicId,
@@ -62,6 +70,10 @@ export default function Guides() {
       ...prev,
       [topicId]: { id: topicId, ...data, topicId },
     }));
+
+    const topicTitle = topics.find(t => t.id === topicId)?.title || topicId;
+    logAction(actor, isNewGuide ? "create_guide" : "edit_guide",
+      `${isNewGuide ? "Created" : "Updated"} guide for "${topicTitle}" (${data.sections?.length || 0} sections)`);
   }
 
   if (loading) return <p className={styles.loadingText}>Loading guides...</p>;

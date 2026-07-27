@@ -3,6 +3,8 @@ import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db, firebaseConfig } from "../../firebase/firebase";
+import { useAuth } from "../../contexts/authContext";
+import { logAction } from "../../firebase/logs";
 import Modal from "../../components/Modal";
 import styles from "./Pages.module.css";
 
@@ -44,10 +46,7 @@ export default function Accounts() {
               Creates a Firebase Auth account and saves it to the teacheraccounts collection.
               Teachers can log in to the teacher portal with these credentials.
             </p>
-            <button
-              className={styles.actionBtn}
-              onClick={() => setShowTeacherModal(true)}
-            >
+            <button className={styles.actionBtn} onClick={() => setShowTeacherModal(true)}>
               + Create Teacher
             </button>
           </div>
@@ -63,10 +62,7 @@ export default function Accounts() {
               Creates a Firebase Auth account and saves it to the adminaccounts collection.
               Admins can log in to this portal with these credentials.
             </p>
-            <button
-              className={styles.actionBtn}
-              onClick={() => setShowAdminModal(true)}
-            >
+            <button className={styles.actionBtn} onClick={() => setShowAdminModal(true)}>
               + Create Admin
             </button>
           </div>
@@ -74,29 +70,21 @@ export default function Accounts() {
       )}
 
       {showTeacherModal && (
-        <CreateAccountModal
-          type="teacher"
-          onClose={() => setShowTeacherModal(false)}
-        />
+        <CreateAccountModal type="teacher" onClose={() => setShowTeacherModal(false)} />
       )}
-
       {showAdminModal && (
-        <CreateAccountModal
-          type="admin"
-          onClose={() => setShowAdminModal(false)}
-        />
+        <CreateAccountModal type="admin" onClose={() => setShowAdminModal(false)} />
       )}
     </div>
   );
 }
 
 function CreateAccountModal({ type, onClose }) {
+  const { currentUser, userRole } = useAuth();
+  const actor = { uid: currentUser?.uid, email: currentUser?.email, role: userRole };
   const isTeacher = type === "teacher";
-  const [form, setForm] = useState({
-    email:    "",
-    password: "",
-    username: "",
-  });
+
+  const [form, setForm] = useState({ email: "", password: "", username: "" });
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState("");
   const [success, setSuccess] = useState("");
@@ -106,29 +94,15 @@ function CreateAccountModal({ type, onClose }) {
   }
 
   async function handleSave() {
-    if (!form.email || !form.password) {
-      setError("Email and password are required.");
-      return;
-    }
-    if (isTeacher && !form.username) {
-      setError("Username is required for teacher accounts.");
-      return;
-    }
-    if (form.password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      return;
-    }
+    if (!form.email || !form.password) { setError("Email and password are required."); return; }
+    if (isTeacher && !form.username) { setError("Username is required for teacher accounts."); return; }
+    if (form.password.length < 6) { setError("Password must be at least 6 characters."); return; }
 
     setSaving(true);
     setError("");
     setSuccess("");
 
-    const snapshot = {
-      email:    form.email,
-      username: form.username,
-      password: form.password,
-    };
-    console.log("Creating account with:", snapshot);
+    const snapshot = { email: form.email, username: form.username, password: form.password };
 
     const tempApp  = initializeApp(firebaseConfig, `temp-${Date.now()}`);
     const tempAuth = getAuth(tempApp);
@@ -140,15 +114,12 @@ function CreateAccountModal({ type, onClose }) {
       const newUser = userCredential.user;
 
       if (isTeacher && (!snapshot.email || !snapshot.username || !newUser.uid)) {
-        throw new Error(
-          `Refusing empty teacher write — email="${snapshot.email}" username="${snapshot.username}" uid="${newUser.uid}"`
-        );
+        throw new Error(`Refusing empty teacher write`);
       }
       if (!isTeacher && (!snapshot.email || !newUser.uid)) {
-        throw new Error(
-          `Refusing empty admin write — email="${snapshot.email}" uid="${newUser.uid}"`
-        );
+        throw new Error(`Refusing empty admin write`);
       }
+
       if (isTeacher) {
         await setDoc(doc(db, "teacheraccounts", newUser.uid), {
           uid: newUser.uid, email: snapshot.email, username: snapshot.username,
@@ -161,6 +132,9 @@ function CreateAccountModal({ type, onClose }) {
         });
       }
 
+      logAction(actor, isTeacher ? "create_teacher" : "create_admin",
+        `Created ${isTeacher ? "teacher" : "admin"} account: ${snapshot.email}${isTeacher ? ` (username: ${snapshot.username})` : ""}`);
+
       setSuccess(`${isTeacher ? "Teacher" : "Admin"} account created successfully!`);
       setForm({ email: "", password: "", username: "" });
 
@@ -168,8 +142,6 @@ function CreateAccountModal({ type, onClose }) {
       console.error("Account creation failed:", err);
       if (err.code === "auth/email-already-in-use") {
         setError("This email is already registered.");
-      } else if (err.message?.startsWith("Refusing empty")) {
-        setError("Internal error — form was empty. Check the console for details.");
       } else {
         setError("Failed to create account. Try again.");
       }
@@ -182,44 +154,29 @@ function CreateAccountModal({ type, onClose }) {
   return (
     <Modal title={isTeacher ? "Create Teacher Account" : "Create Admin Account"} onClose={onClose}>
       <div className={styles.modalFields}>
-
         {isTeacher && (
           <div className={styles.fieldGroup}>
             <label className={styles.label}>Username</label>
             <input
-              name="username"
-              className={styles.input}
-              value={form.username}
-              onChange={handleChange}
-              placeholder="e.g. teacher_juan"
+              name="username" className={styles.input} value={form.username}
+              onChange={handleChange} placeholder="e.g. teacher_juan"
             />
           </div>
         )}
-
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Email</label>
           <input
-            name="email"
-            type="email"
-            className={styles.input}
-            value={form.email}
-            onChange={handleChange}
-            placeholder="e.g. teacher@school.com"
+            name="email" type="email" className={styles.input} value={form.email}
+            onChange={handleChange} placeholder="e.g. teacher@school.com"
           />
         </div>
-
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Password</label>
           <input
-            name="password"
-            type="password"
-            className={styles.input}
-            value={form.password}
-            onChange={handleChange}
-            placeholder="Min. 6 characters"
+            name="password" type="password" className={styles.input} value={form.password}
+            onChange={handleChange} placeholder="Min. 6 characters"
           />
         </div>
-
       </div>
 
       {error   && <p className={styles.modalError}>{error}</p>}
