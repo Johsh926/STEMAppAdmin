@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   collection, getDocs, deleteDoc, doc,
-  addDoc, setDoc, serverTimestamp, orderBy, query,
+  addDoc, setDoc, serverTimestamp, orderBy, query, writeBatch 
 } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
 import { useAuth } from "../../contexts/authContext";
@@ -36,8 +36,6 @@ export default function Questions() {
   async function fetchAll() {
     setLoading(true);
     try {
-      // One read gives us both the id list (used everywhere downstream
-      // exactly as before) and the metadata map (title/createdAt) for display.
       const topicsSnap = await getDocs(collection(db, "questions"));
       const topicList = topicsSnap.docs.map(d => d.id);
       const metaMap = {};
@@ -95,7 +93,7 @@ export default function Questions() {
       setTopics(prev => [...prev, cleaned]);
       setTopicMeta(prev => ({
         ...prev,
-        [cleaned]: { title: newTopic.trim(), createdAt: new Date() }, // optimistic; real Timestamp lands on next fetchAll
+        [cleaned]: { title: newTopic.trim(), createdAt: new Date() },
       }));
       logAction(actor, "create_topic", `Created new topic: "${newTopic.trim()}"`);
       setNewTopic("");
@@ -107,12 +105,6 @@ export default function Questions() {
       setSavingTopic(false);
     }
   }
-
-  // Deleting a topic means deleting three things: every question document
-  // in its easy/medium/hard subcollections, the topic document itself, and
-  // its guide (if one exists). Firestore does not cascade this on its own —
-  // deleting just the parent doc would leave orphaned questions behind,
-  // still taking up storage and permanently unreachable through this UI.
   async function handleDeleteTopic(topicId) {
     const title = topicMeta[topicId]?.title || topicId;
     const affectedCount = questions.filter(q => q.topic === topicId).length;
@@ -126,7 +118,6 @@ export default function Questions() {
     if (!confirmed) return;
 
     try {
-      // 1. Delete every question doc across all three difficulty subcollections
       await Promise.all(
         DIFFICULTIES.map(async (difficulty) => {
           const snap = await getDocs(collection(db, "questions", topicId, difficulty));
@@ -134,11 +125,8 @@ export default function Questions() {
         })
       );
 
-      // 2. Delete the topic document itself
       await deleteDoc(doc(db, "questions", topicId));
 
-      // 3. Delete the associated guide — safe no-op if none exists,
-      //    Firestore does not error on deleting a nonexistent document
       await deleteDoc(doc(db, "guides", topicId));
 
       setTopics(prev => prev.filter(t => t !== topicId));
@@ -171,34 +159,46 @@ export default function Questions() {
     }
   }
 
-  async function handleEdit(updated) {
-    try {
-      await setDoc(
-        doc(db, "questions", updated.topic, updated.difficulty, updated.id),
-        {
-          question:  updated.question,
-          answer:    updated.answer,
-          choices:   updated.choices,
-          imageUrl:  updated.imageUrl || "",
-          createdBy: updated.createdBy,
-          createdAt: updated.createdAt,
-        }
-      );
-      setQuestions(prev =>
-        prev.map(q =>
-          q.id === updated.id && q.topic === updated.topic && q.difficulty === updated.difficulty
-            ? { ...q, ...updated }
-            : q
-        )
-      );
-      logAction(actor, "edit_question",
-        `Edited question in ${updated.topic}/${updated.difficulty}: "${(updated.question || "").slice(0, 60)}"`);
+ async function handleEdit(original, updated) {
+  try {
+    const pathChanged =
+      updated.topic !== original.topic || updated.difficulty !== original.difficulty;
+
+    const newRef = doc(db, "questions", updated.topic, updated.difficulty, updated.id);
+    const payload = {
+      question:  updated.question,
+      answer:    updated.answer,
+      choices:   updated.choices,
+      imageUrl:  updated.imageUrl || "",
+      createdBy: updated.createdBy,
+      createdAt: updated.createdAt,
+    };
+
+    if (pathChanged) {
+      const oldRef = doc(db, "questions", original.topic, original.difficulty, original.id);
+      const batch = writeBatch(db);
+      batch.set(newRef, payload);
+      batch.delete(oldRef);
+      await batch.commit();
+    } else {
+      await setDoc(newRef, payload);
+    }
+
+    setQuestions(prev =>
+      prev.map(q =>
+        q.id === original.id && q.topic === original.topic && q.difficulty === original.difficulty
+          ? { ...q, ...updated }
+          : q
+      )
+    );
+
+    logAction(actor, "edit_question",
+      `Edited question in ${updated.topic}/${updated.difficulty}: "${(updated.question || "").slice(0, 60)}"`);
     } catch (err) {
       console.error("Edit failed:", err);
       throw err;
     }
   }
-
   const filtered = questions.filter(q => {
     const topicOk = filterTopic      === "all" || q.topic      === filterTopic;
     const diffOk  = filterDifficulty === "all" || q.difficulty === filterDifficulty;
@@ -255,7 +255,6 @@ export default function Questions() {
         </div>
       )}
 
-      {/* Manage Topics — name, created date, question count, and delete */}
       <div className={styles.topicManageGrid}>
         {topics.map(t => {
           const meta = topicMeta[t] || {};
@@ -361,7 +360,7 @@ export default function Questions() {
           question={editingQuestion}
           topics={topics}
           onClose={() => setEditingQuestion(null)}
-          onSaved={handleEdit}
+          onSaved={(updated) => handleEdit(editingQuestion, updated)}
         />
       )}
 
