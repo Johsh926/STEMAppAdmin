@@ -79,18 +79,6 @@ export default function Users() {
     }
   }
 
-  async function handlePasswordReset(email) {
-    if (!email) { alert("No email found for this user."); return; }
-    try {
-      await sendPasswordResetEmail(auth, email);
-      alert(`Password reset email sent to ${email}`);
-      logAction(actor, "reset_password", `Sent password reset email to ${email}`);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to send reset email.");
-    }
-  }
-
   const filtered = filter === "all" ? allUsers : allUsers.filter(u => u.role.toLowerCase() === filter);
 
   function roleBadgeColor(role) {
@@ -151,12 +139,6 @@ export default function Users() {
                 onClick={() => handleDelete(u.id, u.col)}
               >
                 Remove
-              </button>
-              <button
-                className={styles.rowBtn}
-                onClick={() => handlePasswordReset(u.email || u.admin_email)}
-              >
-                Reset Password
               </button>
             </td>
           </tr>
