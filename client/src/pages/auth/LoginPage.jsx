@@ -107,9 +107,6 @@ const AdminLogin = () => {
             <i className="ti ti-shield-check" aria-hidden="true" />
           </div>
           <h1 className={styles.title}>Admin Portal</h1>
-          <p className={styles.subtitle}>
-            Restricted Access — Authorized Personnel Only
-          </p>
         </div>
 
         <div className={styles.divider} />
@@ -180,10 +177,6 @@ const AdminLogin = () => {
             )}
           </button>
         </div>
-
-        <p className={styles.footer}>
-          All access attempts are logged and monitored.
-        </p>
       </div>
     </div>
   );
