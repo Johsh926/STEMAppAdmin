@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/authContext";
 import { doSignInWithEmailAndPassword, doSignOut } from "../../firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { db, firebaseConfigured } from "../../firebase/firebase";
+import { db } from "../../firebase/firebase";
 import styles from "./LoginPage.module.css";
 
 const AdminLogin = () => {
@@ -37,14 +37,6 @@ const AdminLogin = () => {
   const handleSubmit = async () => {
   setError("");
   if (!email || !password) { setError("Please fill all fields."); return; }
-
-  if (!firebaseConfigured || !db) {
-    setError(
-      "Firebase is not configured. Create client/.env from client/.env.example, then restart Vite."
-    );
-    return;
-  }
-
   setLoading(true);
 
   try {
@@ -115,9 +107,6 @@ const AdminLogin = () => {
             <i className="ti ti-shield-check" aria-hidden="true" />
           </div>
           <h1 className={styles.title}>Admin Portal</h1>
-          <p className={styles.subtitle}>
-            Restricted Access — Authorized Personnel Only
-          </p>
         </div>
 
         <div className={styles.divider} />
@@ -188,10 +177,6 @@ const AdminLogin = () => {
             )}
           </button>
         </div>
-
-        <p className={styles.footer}>
-          All access attempts are logged and monitored.
-        </p>
       </div>
     </div>
   );

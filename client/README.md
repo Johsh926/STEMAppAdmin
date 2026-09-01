@@ -1,17 +1,3 @@
-# STEM Admin Portal – Firebase setup
-
-Before running the app, create `client/.env` from `client/.env.example` and add the Firebase Web App configuration.
-
-Run:
-
-```bash
-cd client
-npm install
-npm run dev
-```
-
-The app will now render the login page even if Firebase configuration is missing, instead of crashing with `auth/invalid-api-key`. Login and Firestore features require the real Firebase values.
-
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

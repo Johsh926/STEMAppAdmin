@@ -1,32 +1,18 @@
-import {
-  signInWithEmailAndPassword,
-  signOut,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-} from "firebase/auth";
-import { auth, firebaseConfigured } from "./firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { auth } from "./firebase";
 
-function requireFirebaseAuth() {
-  if (!firebaseConfigured || !auth) {
-    throw new Error(
-      "Firebase is not configured. Create client/.env from client/.env.example."
-    );
-  }
-  return auth;
+export function doSignInWithEmailAndPassword(email, password){
+  return signInWithEmailAndPassword(auth, email, password);
 }
 
-export function doSignInWithEmailAndPassword(email, password) {
-  return signInWithEmailAndPassword(requireFirebaseAuth(), email, password);
-}
-
-export function doSignOut() {
-  return signOut(requireFirebaseAuth());
+export function doSignOut(){
+  return signOut(auth);
 }
 
 export function doCreateUserWithEmailAndPassword(email, password) {
-  return createUserWithEmailAndPassword(requireFirebaseAuth(), email, password);
+  return createUserWithEmailAndPassword(auth, email, password);
 }
 
 export function doPasswordReset(email) {
-  return sendPasswordResetEmail(requireFirebaseAuth(), email);
+  return sendPasswordResetEmail(auth, email);
 }

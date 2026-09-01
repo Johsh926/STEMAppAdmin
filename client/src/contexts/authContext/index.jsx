@@ -1,7 +1,8 @@
 import { useState, useEffect, createContext, useContext } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db, firebaseConfigured } from "../../firebase/firebase";
+import { auth, db } from "../../firebase/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { initializeApp } from "firebase/app";
 
 export const AuthContext = createContext();
 
@@ -17,13 +18,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Firebase is optional at startup so the UI can still render and show
-    // a useful setup message when client/.env is missing.
-    if (!firebaseConfigured || !auth || !db) {
-      setLoading(false);
-      return undefined;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, initializeUser);
     return unsubscribe;
   }, []);
@@ -42,7 +36,7 @@ export function AuthProvider({ children }) {
           if (teacherSnap.exists() && teacherSnap.data().status !== "inactive") {
             setUserRole("teacher");
           } else {
-            setUserRole(null);
+            setUserRole(null); // logged in, but no portal access
           }
         }
       } catch (err) {
@@ -57,15 +51,7 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }
 
-  const value = {
-    currentUser,
-    userLoggedIn,
-    userRole,
-    loading,
-    accountSwitching,
-    setAccountSwitching,
-    firebaseConfigured,
-  };
+  const value = { currentUser, userLoggedIn, userRole, loading, accountSwitching, setAccountSwitching, };
 
   return (
     <AuthContext.Provider value={value}>

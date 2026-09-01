@@ -10,7 +10,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 32px;
+  padding: 0 24px;
   min-height: 64px;
   gap: 20px;
   font-family: 'Inter', sans-serif;
