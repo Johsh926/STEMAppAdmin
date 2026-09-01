@@ -21,17 +21,24 @@ export default function Users() {
   async function fetchAllUsers() {
     setLoading(true);
     try {
-      const [usersSnap, teachersSnap, adminsSnap, usernamesSnap] = await Promise.all([
-        getDocs(collection(db, "users")),
-        getDocs(collection(db, "teacheraccounts")),
-        getDocs(collection(db, "adminaccounts")),
-        getDocs(collection(db, "usernames")),
-      ]);
+     const [usersSnap, teachersSnap, adminsSnap, usernamesSnap, leaderboardSnap] = await Promise.all([
+   getDocs(collection(db, "users")),
+   getDocs(collection(db, "teacheraccounts")),
+   getDocs(collection(db, "adminaccounts")),
+   getDocs(collection(db, "usernames")),
+  getDocs(collection(db, "leaderboard")),
+ ]);
 
       const uidToUsername = {};
       usernamesSnap.docs.forEach(d => {
         const data = d.data();
         if (data.uid) uidToUsername[data.uid] = d.id;
+      });
+     
+      const uidToHighestLevel = {};
+      leaderboardSnap.docs.forEach(d => {
+        const data = d.data();
+        if (data.uid) uidToHighestLevel[data.uid] = data.HighestLevel ?? 0;
       });
 
       setAllUsers([
@@ -39,6 +46,7 @@ export default function Users() {
           id: d.id, col: "users", role: "Student",
           ...d.data(),
           username: uidToUsername[d.id] || "—",
+          highestLevel: uidToHighestLevel[d.id] ?? 0,
         })),
         ...teachersSnap.docs.map(d => ({ id: d.id, col: "teacheraccounts", role: "Teacher", ...d.data() })),
         ...adminsSnap.docs.map(d => ({ id: d.id, col: "adminaccounts", role: "Admin", ...d.data() })),
@@ -112,7 +120,7 @@ export default function Users() {
       </div>
 
       <Table
-        columns={["Username", "Email", "Role", "Status", "Joined", "Actions"]}
+        columns={["Username", "Email", "Role","Highest Level", "Status", "Joined", "Actions"]}
         loading={loading}
         empty={filtered.length === 0}
         emptyText="No users found."
@@ -121,7 +129,14 @@ export default function Users() {
           <tr key={u.id}>
             <td>{u.username || "—"}</td>
             <td className={styles.muted}>{u.email || u.admin_email || "—"}</td>
-            <td><Badge color={roleBadgeColor(u.role)}>{u.role}</Badge></td>
+            <td>
+  <Badge color={roleBadgeColor(u.role)}>
+    {u.role}
+  </Badge>
+</td>
+<td>
+  {u.highestLevel || "—"}
+</td>
             <td>
               <Badge color={u.status === "inactive" ? "red" : "green"}>
                 {u.status || "active"}
