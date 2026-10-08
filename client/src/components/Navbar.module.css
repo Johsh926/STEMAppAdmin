@@ -6,7 +6,7 @@
   top: 0;
   z-index: 50;
   background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #c5aa46;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -39,7 +39,8 @@
 .navLogoText {
   font-size: 16px;
   font-weight: 700;
-  color: #7c3aed;
+  color: #4D8F48;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
@@ -55,8 +56,8 @@
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border: none;
-  background: none;
+  border: 1px solid transparent;
+  background: #F1E2AF;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -67,13 +68,14 @@
 }
 
 .navTab:hover {
-  background: #f1f5f9;
+  background: #EBD89A;
   color: #0f172a;
 }
 
 .navTabActive {
-  background: #ede9fe;
-  color: #7c3aed;
+  background: #e7f3d2;
+  border: 1px solid #7fb069; 
+  color: #222;
 }
 
 .navTabIcon {
@@ -99,7 +101,7 @@
 .signOutBtn {
   padding: 8px 16px;
   background: none;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;

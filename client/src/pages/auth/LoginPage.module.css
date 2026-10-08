@@ -17,11 +17,11 @@
 
 .page {
   min-height: 100vh;
-  background: #f1f5f9;
+  background: #F7F5F0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Poppins', sans-serif;
   padding: 24px;
 }
 
@@ -31,9 +31,9 @@
 
 .card {
   width: 100%;
-  max-width: 400px;
+  max-width: 360px;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #b8a77b;
   border-radius: 12px;
   padding: 32px 28px;
   animation: fadeUp 0.4s ease both;
