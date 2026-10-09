@@ -4,7 +4,7 @@
 .page { display: flex; flex-direction: column; gap: 20px; font-family: 'Inter', sans-serif; }
 
 .pageHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.sectionTitle { font-size: 16px; font-weight: 600; color: #0f172a; }
+.sectionTitle { font-size: 34px; font-weight: 700; color: #222; }
 .sectionSub { font-size: 13px; color: #94a3b8; margin-top: 2px; }
 
 .statsGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
@@ -44,11 +44,11 @@
 .rowBtn:hover { background: #f1f5f9; }
 .rowBtnDanger:hover { border-color: #fecaca; color: #dc2626; background: #fef2f2; }
 .actionBtn {
-  padding: 8px 16px; background: #7c3aed; color: white; border: none;
+  padding: 8px 16px; background: #57C35A; color: white; border: none;
   border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
   font-family: 'Inter', sans-serif; transition: background 0.15s; white-space: nowrap;
 }
-.actionBtn:hover { background: #6d28d9; }
+.actionBtn:hover { background: #48B04B; }
 .actionBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .modalFields { display: flex; flex-direction: column; gap: 14px; }
@@ -68,7 +68,7 @@
 .settingsGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 @media (max-width: 640px) { .settingsGrid { grid-template-columns: 1fr; } }
 .settingCard {
-  background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
+  background: #ffffff; border: 1px solid #E8E2D5; border-radius: 12px;
   padding: 20px; display: flex; flex-direction: column; gap: 6px;
 }
 .settingTitle { font-size: 14px; font-weight: 600; color: #0f172a; }
