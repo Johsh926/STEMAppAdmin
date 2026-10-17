@@ -141,11 +141,11 @@ export default function Responses() {
       </div>
 
       <div className={styles.statsGrid}>
-  <div className={styles.statCard}><div><span className={styles.statLabel}>Total messages</span><strong>{counts.All}</strong></div></div>
-  <div className={styles.statCard}><div><span className={styles.statLabel}>Pending</span><strong>{counts.Pending}</strong></div></div>
-  <div className={styles.statCard}><div><span className={styles.statLabel}>In progress</span><strong>{counts["In Progress"]}</strong></div></div>
-  <div className={styles.statCard}><div><span className={styles.statLabel}>Resolved</span><strong>{counts.Resolved}</strong></div></div>
-</div>
+        <div className={styles.statCard}><div><span className={styles.statLabel}>Total messages</span><strong>{counts.All}</strong></div></div>
+        <div className={styles.statCard}><div><span className={styles.statLabel}>Pending</span><strong>{counts.Pending}</strong></div></div>
+        <div className={styles.statCard}><div><span className={styles.statLabel}>In progress</span><strong>{counts["In Progress"]}</strong></div></div>
+        <div className={styles.statCard}><div><span className={styles.statLabel}>Resolved</span><strong>{counts.Resolved}</strong></div></div>
+      </div>
       {notice && <div className={styles.successMessage} role="status">{notice}</div>}
       {actionError && <div className={styles.errorMessage} role="alert">{actionError}</div>}
       {loadError && <div className={styles.errorMessage} role="alert">{loadError}</div>}
@@ -166,7 +166,7 @@ export default function Responses() {
         </div>
 
         {loading ? <div className={styles.emptyState}>Loading student responses...</div> : filteredItems.length === 0 ? (
-          <div className={styles.emptyState}><span>📭</span><strong>No responses found</strong><p>Student feedback submitted to the “responses” collection will appear here.</p></div>
+          <div className={styles.emptyState}><strong>No responses found</strong><p>Student feedback submitted to the “responses” collection will appear here.</p></div>
         ) : (
           <div className={styles.responseList}>
             {filteredItems.map((item) => (
