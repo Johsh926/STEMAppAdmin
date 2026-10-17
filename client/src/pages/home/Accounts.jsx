@@ -27,20 +27,20 @@ export default function Accounts() {
           className={`${styles.filterBtn} ${activeSection === "teacher" ? styles.filterBtnActive : ""}`}
           onClick={() => setActiveSection("teacher")}
         >
-          🎓 Teacher Accounts
+          Teacher Accounts
         </button>
         <button
           className={`${styles.filterBtn} ${activeSection === "admin" ? styles.filterBtnActive : ""}`}
           onClick={() => setActiveSection("admin")}
         >
-          🛡️ Admin Accounts
+          Admin Accounts
         </button>
       </div>
 
       {activeSection === "teacher" && (
         <div className={styles.accountSection}>
           <div className={styles.accountCard}>
-            <div className={styles.accountCardIcon}>🎓</div>
+            <div className={styles.accountCardIcon}></div>
             <h3 className={styles.accountCardTitle}>Create Teacher Account</h3>
             <p className={styles.accountCardDesc}>
               Creates a Firebase Auth account and saves it to the teacheraccounts collection.
@@ -56,7 +56,7 @@ export default function Accounts() {
       {activeSection === "admin" && (
         <div className={styles.accountSection}>
           <div className={styles.accountCard}>
-            <div className={styles.accountCardIcon}>🛡️</div>
+            <div className={styles.accountCardIcon}></div>
             <h3 className={styles.accountCardTitle}>Create Admin Account</h3>
             <p className={styles.accountCardDesc}>
               Creates a Firebase Auth account and saves it to the adminaccounts collection.
