@@ -20,8 +20,8 @@ export default function Questions() {
   const actor = { uid: currentUser?.uid, email: currentUser?.email, role: userRole };
 
   const [questions, setQuestions]               = useState([]);
-  const [topics, setTopics]                     = useState([]);      // unchanged shape: array of id strings
-  const [topicMeta, setTopicMeta]               = useState({});      // NEW: { [id]: { title, createdAt } }, display-only
+  const [topics, setTopics]                     = useState([]);      
+  const [topicMeta, setTopicMeta]               = useState({});      
   const [loading, setLoading]                   = useState(true);
   const [showAddModal, setShowAddModal]         = useState(false);
   const [showAddTopic, setShowAddTopic]         = useState(false);
@@ -105,15 +105,13 @@ export default function Questions() {
       setSavingTopic(false);
     }
   }
+
   async function handleDeleteTopic(topicId) {
     const title = topicMeta[topicId]?.title || topicId;
     const affectedCount = questions.filter(q => q.topic === topicId).length;
 
     const confirmed = window.confirm(
-      `Delete topic "${title}"?\n\n` +
-      `This permanently deletes ${affectedCount} question${affectedCount !== 1 ? "s" : ""} ` +
-      `across all difficulties, and its guide if one exists.\n\n` +
-      `This cannot be undone.`
+      `Delete topic "${title}"?\n\nThis permanently deletes ${affectedCount} questions.\n\nThis cannot be undone.`
     );
     if (!confirmed) return;
 
@@ -124,9 +122,7 @@ export default function Questions() {
           await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
         })
       );
-
       await deleteDoc(doc(db, "questions", topicId));
-
       await deleteDoc(doc(db, "guides", topicId));
 
       setTopics(prev => prev.filter(t => t !== topicId));
@@ -138,9 +134,7 @@ export default function Questions() {
       setQuestions(prev => prev.filter(q => q.topic !== topicId));
       if (filterTopic === topicId) setFilterTopic("all");
 
-      logAction(actor, "delete_topic",
-        `Deleted topic "${title}" (${affectedCount} question${affectedCount !== 1 ? "s" : ""}, guide included if present)`);
-
+      logAction(actor, "delete_topic", `Deleted topic "${title}"`);
     } catch (err) {
       console.error("Failed to delete topic:", err);
       alert("Failed to delete topic. Check the console for details.");
@@ -152,8 +146,7 @@ export default function Questions() {
     try {
       await deleteDoc(doc(db, "questions", question.topic, question.difficulty, question.id));
       setQuestions(prev => prev.filter(q => q.id !== question.id));
-      logAction(actor, "delete_question",
-        `Deleted question in ${question.topic}/${question.difficulty}: "${(question.question || "").slice(0, 60)}"`);
+      logAction(actor, "delete_question", `Deleted question in ${question.topic}/${question.difficulty}`);
     } catch (err) {
       console.error("Delete failed:", err);
     }
@@ -165,6 +158,8 @@ export default function Questions() {
       updated.topic !== original.topic || updated.difficulty !== original.difficulty;
 
     const newRef = doc(db, "questions", updated.topic, updated.difficulty, updated.id);
+    
+    // UPDATED: Preserve analytics and flags during edit
     const payload = {
       question:  updated.question,
       answer:    updated.answer,
@@ -172,6 +167,9 @@ export default function Questions() {
       imageUrl:  updated.imageUrl || "",
       createdBy: updated.createdBy,
       createdAt: updated.createdAt,
+      totalAttempts: updated.totalAttempts || 0,
+      correctAttempts: updated.correctAttempts || 0,
+      isFlagged: updated.isFlagged || false,
     };
 
     if (pathChanged) {
@@ -192,13 +190,13 @@ export default function Questions() {
       )
     );
 
-    logAction(actor, "edit_question",
-      `Edited question in ${updated.topic}/${updated.difficulty}: "${(updated.question || "").slice(0, 60)}"`);
+    logAction(actor, "edit_question", `Edited question in ${updated.topic}/${updated.difficulty}`);
     } catch (err) {
       console.error("Edit failed:", err);
       throw err;
     }
   }
+  
   const filtered = questions.filter(q => {
     const topicOk = filterTopic      === "all" || q.topic      === filterTopic;
     const diffOk  = filterDifficulty === "all" || q.difficulty === filterDifficulty;
@@ -214,7 +212,6 @@ export default function Questions() {
 
   return (
     <div className={styles.page}>
-
       <div className={styles.pageHeader}>
         <div>
           <h2 className={styles.sectionTitle}>Question Bank</h2>
@@ -239,17 +236,10 @@ export default function Questions() {
             placeholder="e.g. Algebra"
             style={{ maxWidth: 240 }}
           />
-          <button
-            className={styles.actionBtn}
-            onClick={handleAddTopic}
-            disabled={savingTopic}
-          >
+          <button className={styles.actionBtn} onClick={handleAddTopic} disabled={savingTopic}>
             {savingTopic ? "Saving..." : "Save Topic"}
           </button>
-          <button
-            className={styles.rowBtn}
-            onClick={() => { setShowAddTopic(false); setNewTopic(""); }}
-          >
+          <button className={styles.rowBtn} onClick={() => { setShowAddTopic(false); setNewTopic(""); }}>
             Cancel
           </button>
         </div>
@@ -258,112 +248,91 @@ export default function Questions() {
       <div className={styles.topicManageGrid}>
         {topics.map(t => {
           const meta = topicMeta[t] || {};
-          const created = meta.createdAt?.toDate
-            ? meta.createdAt.toDate().toLocaleDateString()
-            : meta.createdAt instanceof Date
-              ? meta.createdAt.toLocaleDateString()
-              : "—";
+          const created = meta.createdAt?.toDate ? meta.createdAt.toDate().toLocaleDateString() : "—";
           const questionCount = questions.filter(q => q.topic === t).length;
 
           return (
             <div key={t} className={styles.topicManageChip}>
               <Badge color="purple">{meta.title || t}</Badge>
               <span className={styles.topicManageDate}>
-                Created {created} · {questionCount} question{questionCount !== 1 ? "s" : ""}
+                Created {created} · {questionCount} questions
               </span>
-              <button
-                className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-                onClick={() => handleDeleteTopic(t)}
-                title={`Delete topic "${meta.title || t}"`}
-              >✕</button>
+              <button className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={() => handleDeleteTopic(t)}>✕</button>
             </div>
           );
         })}
-        {topics.length === 0 && (
-          <p className={styles.muted}>No topics yet — click "+ Add Topic" to create one.</p>
-        )}
       </div>
 
       <div className={styles.filterRow}>
-        <select
-          className={styles.filterSelect}
-          value={filterTopic}
-          onChange={e => setFilterTopic(e.target.value)}
-        >
+        <select className={styles.filterSelect} value={filterTopic} onChange={e => setFilterTopic(e.target.value)}>
           <option value="all">All Topics</option>
-          {topics.map(t => (
-            <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-          ))}
+          {topics.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
         </select>
-
-        <select
-          className={styles.filterSelect}
-          value={filterDifficulty}
-          onChange={e => setFilterDifficulty(e.target.value)}
-        >
+        <select className={styles.filterSelect} value={filterDifficulty} onChange={e => setFilterDifficulty(e.target.value)}>
           <option value="all">All Difficulties</option>
-          {DIFFICULTIES.map(d => (
-            <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
-          ))}
+          {DIFFICULTIES.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
         </select>
       </div>
 
+      {/* UPDATED: Added "Pass Rate" and "Status" to columns */}
       <Table
-        columns={["#", "Image", "Question", "Topic", "Difficulty", "Answer", "Actions"]}
+        columns={["#", "Image", "Question", "Topic", "Difficulty", "Answer", "Pass Rate", "Status", "Actions"]}
         loading={loading}
         empty={filtered.length === 0}
         emptyText="No questions found."
       >
-        {filtered.map((q, i) => (
-          <tr key={`${q.topic}-${q.difficulty}-${q.id}`}>
-            <td className={styles.muted}>{i + 1}</td>
-            <td>
-              {q.imageUrl ? (
-                <img
-                  src={q.imageUrl}
-                  alt="question"
-                  style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0" }}
-                />
-              ) : (
-                <span className={styles.muted}>—</span>
-              )}
-            </td>
-            <td className={styles.questionCell}>{q.question || "—"}</td>
-            <td><Badge color="purple">{q.topic}</Badge></td>
-            <td><Badge color={diffColor(q.difficulty)}>{q.difficulty}</Badge></td>
-            <td className={styles.muted}>{q.answer || "—"}</td>
-            <td className={styles.actions}>
-              <button className={styles.rowBtn} onClick={() => setEditingQuestion(q)}>
-                Edit
-              </button>
-              <button
-                className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
-                onClick={() => handleDelete(q)}
-              >
-                Delete
-              </button>
-            </td>
-          </tr>
-        ))}
+        {filtered.map((q, i) => {
+          
+          // NEW: Calculate analytics on the fly
+          const attempts = q.totalAttempts || 0;
+          const correct = q.correctAttempts || 0;
+          const passRate = attempts > 0 ? Math.round((correct / attempts) * 100) : null;
+          
+          let passColor = "gray";
+          if (passRate !== null) {
+            if (passRate >= 70) passColor = "green";
+            else if (passRate >= 40) passColor = "orange";
+            else passColor = "red";
+          }
+
+          return (
+            <tr key={`${q.topic}-${q.difficulty}-${q.id}`}>
+              <td className={styles.muted}>{i + 1}</td>
+              <td>
+                {q.imageUrl ? (
+                  <img src={q.imageUrl} alt="question" style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 6, border: "1px solid #e2e8f0" }} />
+                ) : <span className={styles.muted}>—</span>}
+              </td>
+              <td className={styles.questionCell}>{q.question || "—"}</td>
+              <td><Badge color="purple">{q.topic}</Badge></td>
+              <td><Badge color={diffColor(q.difficulty)}>{q.difficulty}</Badge></td>
+              <td className={styles.muted}>{q.answer || "—"}</td>
+              
+              {/* NEW: Display Pass Rate */}
+              <td>
+                {passRate !== null ? (
+                  <Badge color={passColor}>{passRate}% ({attempts} tries)</Badge>
+                ) : (
+                  <span className={styles.muted}>No data</span>
+                )}
+              </td>
+              
+              {/* NEW: Display Flag Status */}
+              <td>
+                {q.isFlagged ? <Badge color="red">🚩 Flagged</Badge> : <Badge color="green">OK</Badge>}
+              </td>
+
+              <td className={styles.actions}>
+                <button className={styles.rowBtn} onClick={() => setEditingQuestion(q)}>Edit</button>
+                <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`} onClick={() => handleDelete(q)}>Delete</button>
+              </td>
+            </tr>
+          );
+        })}
       </Table>
 
-      {showAddModal && (
-        <AddQuestionModal
-          topics={topics}
-          onClose={() => setShowAddModal(false)}
-          onAdded={fetchAll}
-        />
-      )}
-
-      {editingQuestion && (
-        <EditQuestionModal
-          question={editingQuestion}
-          topics={topics}
-          onClose={() => setEditingQuestion(null)}
-          onSaved={(updated) => handleEdit(editingQuestion, updated)}
-        />
-      )}
-
+      {showAddModal && <AddQuestionModal topics={topics} onClose={() => setShowAddModal(false)} onAdded={fetchAll} />}
+      {editingQuestion && <EditQuestionModal question={editingQuestion} topics={topics} onClose={() => setEditingQuestion(null)} onSaved={(updated) => handleEdit(editingQuestion, updated)} />}
     </div>
   );
 }
@@ -404,34 +373,18 @@ function uploadQuestionImage(file, setForm) {
 function QuestionImageField({ form, setForm }) {
   return (
     <div className={styles.fieldGroup}>
-      <label className={styles.label}>
-        Image <span className={styles.optional}>(optional)</span>
-      </label>
-      <input
-        type="file"
-        accept="image/*"
-        className={styles.fileInput}
-        onChange={e => uploadQuestionImage(e.target.files[0], setForm)}
-      />
+      <label className={styles.label}>Image <span className={styles.optional}>(optional)</span></label>
+      <input type="file" accept="image/*" className={styles.fileInput} onChange={e => uploadQuestionImage(e.target.files[0], setForm)} />
       {form.uploadProgress != null && (
         <div>
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} style={{ width: `${form.uploadProgress}%` }} />
-          </div>
-          <span className={styles.progressText}>
-            {form.uploadProgress < 100 ? `Uploading... ${form.uploadProgress}%` : "Processing..."}
-          </span>
+          <div className={styles.progressBar}><div className={styles.progressFill} style={{ width: `${form.uploadProgress}%` }} /></div>
+          <span className={styles.progressText}>{form.uploadProgress < 100 ? `Uploading... ${form.uploadProgress}%` : "Processing..."}</span>
         </div>
       )}
       {form.imageUrl && form.uploadProgress == null && (
         <div className={styles.imagePreviewWrap}>
           <img src={form.imageUrl} alt="preview" className={styles.imagePreview} />
-          <button
-            type="button"
-            className={`${styles.iconBtn} ${styles.iconBtnDanger}`}
-            onClick={() => setForm(prev => ({ ...prev, imageUrl: "" }))}
-            title="Remove image"
-          >✕</button>
+          <button type="button" className={`${styles.iconBtn} ${styles.iconBtnDanger}`} onClick={() => setForm(prev => ({ ...prev, imageUrl: "" }))}>✕</button>
         </div>
       )}
     </div>
@@ -450,9 +403,7 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
 
-  function handleChange(e) {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  }
+  function handleChange(e) { setForm(prev => ({ ...prev, [e.target.name]: e.target.value })); }
 
   function handleChoiceChange(i, val) {
     setForm(prev => {
@@ -480,9 +431,12 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
         imageUrl:  form.imageUrl || "",
         createdBy: currentUser?.email || "unknown",
         createdAt: serverTimestamp(),
+        // NEW: Initialize analytics data
+        totalAttempts: 0,
+        correctAttempts: 0,
+        isFlagged: false, 
       });
-      logAction(actor, "create_question",
-        `Created question in ${form.topic}/${form.difficulty}: "${form.question.slice(0, 60)}"`);
+      logAction(actor, "create_question", `Created question in ${form.topic}/${form.difficulty}`);
       onAdded();
       onClose();
     } catch (err) {
@@ -509,45 +463,29 @@ function AddQuestionModal({ topics, onClose, onAdded }) {
             </select>
           </div>
         </div>
-
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Question</label>
-          <textarea
-            name="question" className={styles.input} value={form.question} onChange={handleChange}
-            placeholder="Enter the question..." rows={3} style={{ resize: "vertical" }}
-          />
+          <textarea name="question" className={styles.input} value={form.question} onChange={handleChange} rows={3} style={{ resize: "vertical" }} />
         </div>
-
         <QuestionImageField form={form} setForm={setForm} />
-
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Choices (A, B, C, D)</label>
           {form.choices.map((c, i) => (
-            <input
-              key={i} className={styles.input} style={{ marginBottom: 6 }} value={c}
-              onChange={e => handleChoiceChange(i, e.target.value)}
-              placeholder={`Choice ${String.fromCharCode(65 + i)}`}
-            />
+            <input key={i} className={styles.input} style={{ marginBottom: 6 }} value={c} onChange={e => handleChoiceChange(i, e.target.value)} placeholder={`Choice ${String.fromCharCode(65 + i)}`} />
           ))}
         </div>
-
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Correct Answer</label>
           <select name="answer" className={styles.input} value={form.answer} onChange={handleChange}>
             <option value="">— Select correct answer —</option>
             {form.choices.filter(c => c.trim() !== "").map((c, i) => <option key={i} value={c}>{c}</option>)}
           </select>
-          <p className={styles.fieldHint}>Select which of your choices above is correct.</p>
         </div>
       </div>
-
       {error && <p className={styles.modalError}>{error}</p>}
-
       <div className={styles.modalActions}>
         <button className={styles.rowBtn} onClick={onClose}>Cancel</button>
-        <button className={styles.actionBtn} onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save Question"}
-        </button>
+        <button className={styles.actionBtn} onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save Question"}</button>
       </div>
     </Modal>
   );
@@ -558,19 +496,15 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
     question:   question.question   || "",
     difficulty: question.difficulty || "easy",
     topic:      question.topic      || topics[0] || "",
-    choices:    question.choices?.length === 4
-                  ? question.choices
-                  : [...(question.choices || []), "", "", "", ""].slice(0, 4),
+    choices:    question.choices?.length === 4 ? question.choices : [...(question.choices || []), "", "", "", ""].slice(0, 4),
     answer:     question.answer     || "",
-    imageUrl:       question.imageUrl || "",
+    imageUrl:   question.imageUrl   || "",
     uploadProgress: null,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState("");
 
-  function handleChange(e) {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
-  }
+  function handleChange(e) { setForm(prev => ({ ...prev, [e.target.name]: e.target.value })); }
 
   function handleChoiceChange(i, val) {
     setForm(prev => {
@@ -620,45 +554,29 @@ function EditQuestionModal({ question, topics, onClose, onSaved }) {
             </select>
           </div>
         </div>
-
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Question</label>
-          <textarea
-            name="question" className={styles.input} value={form.question} onChange={handleChange}
-            rows={3} style={{ resize: "vertical" }}
-          />
+          <textarea name="question" className={styles.input} value={form.question} onChange={handleChange} rows={3} style={{ resize: "vertical" }} />
         </div>
-
         <QuestionImageField form={form} setForm={setForm} />
-
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Choices (A, B, C, D)</label>
           {form.choices.map((c, i) => (
-            <input
-              key={i} className={styles.input} style={{ marginBottom: 6 }} value={c}
-              onChange={e => handleChoiceChange(i, e.target.value)}
-              placeholder={`Choice ${String.fromCharCode(65 + i)}`}
-            />
+            <input key={i} className={styles.input} style={{ marginBottom: 6 }} value={c} onChange={e => handleChoiceChange(i, e.target.value)} />
           ))}
         </div>
-
         <div className={styles.fieldGroup}>
           <label className={styles.label}>Correct Answer</label>
           <select name="answer" className={styles.input} value={form.answer} onChange={handleChange}>
             <option value="">— Select correct answer —</option>
             {form.choices.filter(c => c.trim() !== "").map((c, i) => <option key={i} value={c}>{c}</option>)}
           </select>
-          <p className={styles.fieldHint}>Select which choice is correct.</p>
         </div>
       </div>
-
       {error && <p className={styles.modalError}>{error}</p>}
-
       <div className={styles.modalActions}>
         <button className={styles.rowBtn} onClick={onClose}>Cancel</button>
-        <button className={styles.actionBtn} onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
+        <button className={styles.actionBtn} onClick={handleSave} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</button>
       </div>
     </Modal>
   );

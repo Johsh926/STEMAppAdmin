@@ -6,11 +6,14 @@ export default function Badge({ color = "gray", children }){
     red: styles.badgeRed,
     purple: styles.badgePurple,
     blue: styles.badgeBlue,
+    orange: styles.badgeOrange,
+    yellow: styles.badgeYellow, 
     gray: styles.badgeGray,
   };
+  
   return(
-  <span className={`${styles.badge} ${colorMap[color] || colorMap.gray}`}>
-    {children}
-  </span>
-);
+    <span className={`${styles.badge} ${colorMap[color] || colorMap.gray}`}>
+      {children}
+    </span>
+  );
 }
