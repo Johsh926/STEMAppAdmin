@@ -46,10 +46,10 @@ export default function Overview(){
         </div>
       </header>
       <div className={styles.statsGrid}>
-        <StatCard icon="👥" value={stats.users} label="Students" />
-        <StatCard icon="🎓" value={stats.teachers} label="Teachers" />
-        <StatCard icon="🛡️" value={stats.admins} label="Admins" />
-        <StatCard icon="📋" value={stats.questions} label="Questions" />
+        <StatCard value={stats.users} label="Students" />
+        <StatCard value={stats.teachers} label="Teachers" />
+        <StatCard value={stats.admins} label="Admins" />
+        <StatCard value={stats.questions} label="Questions" />
       </div>
       <section className={styles.recentActivity}>
         <h3 className={styles.recentActivityTitle}>RECENT ACTIVITY</h3>
