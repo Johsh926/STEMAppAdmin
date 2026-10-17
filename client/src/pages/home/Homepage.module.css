@@ -7,9 +7,9 @@
 }
 
 .main {
-  width: 100%;
+  width: calc(100% - 169px); 
+  margin-left: 169px; 
   max-width: 1400px;
-  margin: 0 auto;
   padding: 32px 24px;
   box-sizing: border-box;
 }
@@ -32,11 +32,20 @@
 }
 
 /* ============================= */
+/* Small Desktop/Tablets (1024px and down) */
+/* ============================= */
+@media (max-width: 1024px) {
+  .main {
+    /* FIX: Match the Navbar 150px width breakpoint */
+    width: calc(100% - 150px);
+    margin-left: 150px;
+  }
+}
+
+/* ============================= */
 /* Large Tablets (992px and down) */
 /* ============================= */
-
 @media (max-width: 992px) {
-
   .main {
     max-width: 100%;
     padding: 28px 20px;
@@ -49,16 +58,16 @@
   .pageTitleSub {
     font-size: 13px;
   }
-
 }
 
 /* ============================= */
 /* Tablets (768px and down) */
 /* ============================= */
-
 @media (max-width: 768px) {
-
   .main {
+    /* FIX: Sidebar becomes static top-nav here, so reset margin to 0 */
+    width: 100%;
+    margin-left: 0;
     padding: 24px 18px;
   }
 
@@ -73,15 +82,12 @@
   .pageTitleSub {
     font-size: 12px;
   }
-
 }
 
 /* ============================= */
 /* Mobile Phones (576px and down) */
 /* ============================= */
-
 @media (max-width: 576px) {
-
   .main {
     padding: 18px 14px;
   }
@@ -99,15 +105,12 @@
     font-size: 12px;
     line-height: 1.5;
   }
-
 }
 
 /* ============================= */
 /* Small Phones (400px and down) */
 /* ============================= */
-
 @media (max-width: 400px) {
-
   .main {
     padding: 16px 12px;
   }
@@ -119,5 +122,4 @@
   .pageTitleSub {
     font-size: 11px;
   }
-
 }
