@@ -11,7 +11,7 @@ import Guides    from "./Guides";
 import Logs      from "./Logs";
 import Accounts  from "./Accounts";
 import Settings  from "./Settings";
-import FeedBack from "./Feedback";
+import FeedBack  from "./FeedBack";
 
 import styles from "./Homepage.module.css";
 
@@ -20,7 +20,7 @@ const ALL_TABS = [
   { id: "users",     label: "Users",     icon: "👥", component: Users,     roles: ["admin"] },
   { id: "questions", label: "Questions", icon: "📋", component: Questions, roles: ["admin", "teacher"] },
   { id: "guides",    label: "Guides",    icon: "📖", component: Guides,    roles: ["admin", "teacher"] },
-  { id: "responses", label: "Feedback", icon: "💬", component: FeedBack, roles: ["admin", "teacher"] },
+  { id: "feedback",  label: "Feedback",  icon: "💬", component: FeedBack,  roles: ["admin", "teacher"] },
   { id: "logs",      label: "Logs",      icon: "🧾", component: Logs,      roles: ["admin"] },
   { id: "accounts",  label: "Accounts",  icon: "🔑", component: Accounts,  roles: ["admin"] },
   { id: "settings",  label: "Settings",  icon: "⚙️", component: Settings,  roles: ["admin"] },
