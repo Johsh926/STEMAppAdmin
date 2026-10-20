@@ -3,13 +3,6 @@ import styles from "./Pages.module.css";
 export default function Settings() {
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <div>
-          {/* Inline style added to override the uppercase transform in Pages.module.css to match the UI Titlecase text */}
-          <h2 className={styles.sectionTitle} style={{ textTransform: 'none' }}>Settings</h2>
-          <p className={styles.sectionSub}>Manage your settings here</p>
-        </div>
-      </div>
       <div className={styles.settingsGrid}>
         <div className={styles.settingCard}>
           <p className={styles.settingTitle}>Site Name</p>

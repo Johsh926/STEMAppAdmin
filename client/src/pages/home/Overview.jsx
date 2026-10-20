@@ -39,12 +39,6 @@ export default function Overview() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.pageHeader}>
-        <div>
-          <h2 className={styles.pageTitleText}>OVERVIEW</h2>
-          <p className={styles.pageTitleSub}>Monitor your StemApp platform</p>
-        </div>
-      </header>
       <div className={styles.statsGrid}>
         <StatCard value={stats.users} label="STUDENTS" />
         <StatCard value={stats.teachers} label="TEACHERS" />

@@ -11,7 +11,7 @@ import {
 import { db } from "../../firebase/firebase";
 import { useAuth } from "../../contexts/authContext";
 import { logAction } from "../../firebase/logs";
-import styles from "./Responses.module.css";
+import styles from "./FeedBack.module.css";
 
 const FILTERS = ["All", "Pending", "In Progress", "Resolved"];
 
@@ -132,11 +132,7 @@ export default function Responses() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.headingRow}>
-        <div>
-          <h2>Responses &amp; Feedback</h2>
-          <p>Review student messages, reply to concerns, and track follow-ups.</p>
-        </div>
+      <div className={styles.headingRow} style={{ justifyContent: "flex-end" }}>
         <div className={styles.liveBadge}><span /> Live updates</div>
       </div>
 

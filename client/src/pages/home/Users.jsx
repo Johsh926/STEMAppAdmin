@@ -53,7 +53,6 @@ export default function Users() {
         ...adminsSnap.docs.map(d => ({ id: d.id, col: "adminaccounts", role: "Admin", ...d.data() })),
       ];
 
-      // Deduplicate users by email to avoid rendering redundant records
       const uniqueUsers = Array.from(new Map(combinedUsers.filter(u => u.email || u.admin_email).map(item => [item.email || item.admin_email, item])).values());
       setAllUsers(uniqueUsers);
 
@@ -108,13 +107,6 @@ export default function Users() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <div>
-          <h2 className={styles.pageTitleText}>USERS</h2>
-          <p className={styles.pageTitleSub}>Manage Student, Teacher, and Admin Accounts</p>
-        </div>
-      </div>
-
       <div className={styles.filterRow} style={{ justifyContent: "space-between" }}>
         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
           {["all", "student", "teacher", "admin"].map(f => (

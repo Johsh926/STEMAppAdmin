@@ -14,13 +14,6 @@ export default function Accounts() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <div>
-          <h2 className={styles.sectionTitle}>ACCOUNTS</h2>
-          <p className={styles.sectionSub}>Manage user accounts here</p>
-        </div>
-      </div>
-
       <div className={styles.accountSection}>
         <div className={styles.accountCard}>
           <div className={styles.accountCardIcon}></div>

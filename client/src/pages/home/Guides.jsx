@@ -18,7 +18,6 @@ const DEFAULT_GUIDE_TOPICS = [
 ];
 
 export default function Guides() {
-  // Keep the guide cards visible even when the questions collection is empty.
   const [topics, setTopics]               = useState(DEFAULT_GUIDE_TOPICS);
   const [guides, setGuides]               = useState({});
   const [loading, setLoading]             = useState(true);
@@ -34,8 +33,6 @@ export default function Guides() {
     try {
       const topicsSnap = await getDocs(collection(db, "questions"));
       const topicList  = topicsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      // If questions contains topic documents, use them; otherwise use the four
-      // guide categories shown in the design reference.
       if (topicList.length > 0) setTopics(topicList);
 
       const guidesSnap = await getDocs(collection(db, "guides"));
@@ -53,22 +50,22 @@ export default function Guides() {
 
   async function handleDelete(topicId) {
   if (!window.confirm("Delete this guide?")) return;
-  const topicTitle = topics.find(t => t.id === topicId)?.title || topicId; // read before it's gone
+  const topicTitle = topics.find(t => t.id === topicId)?.title || topicId; 
   try {
     await deleteDoc(doc(db, "guides", topicId));
     setGuides(prev => {
       const updated = { ...prev };
       delete updated[topicId];
-      return updated; // pure — just returns the new state, no side effects inside
+      return updated; 
     });
-      logAction(actor, "delete_guide", `Deleted guide for "${topicTitle}"`); // fires once, after the write succeeds
+      logAction(actor, "delete_guide", `Deleted guide for "${topicTitle}"`); 
     } catch (err) {
       console.error("Delete failed:", err);
     }
   }
 
   async function handleSave(topicId, data) {
-    const isNewGuide = !guides[topicId]; // must be read before setDoc/setGuides run
+    const isNewGuide = !guides[topicId]; 
 
     await setDoc(doc(db, "guides", topicId), {
       ...data,
@@ -89,13 +86,6 @@ export default function Guides() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <div>
-          <h2 className={styles.sectionTitle}>GUIDES</h2>
-          <p className={styles.sectionSub}>Manage your guides here</p>
-        </div>
-      </div>
-
       <div className={styles.guideGrid}>
         {topics.map(topic => {
           const guide     = guides[topic.id];
