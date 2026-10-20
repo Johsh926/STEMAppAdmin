@@ -5,8 +5,9 @@ export default function Settings() {
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <div>
-          <h2 className={styles.sectionTitle}>Settings</h2>
-          <p className={styles.sectionSub}>Configure your application preferences</p>
+          {/* Inline style added to override the uppercase transform in Pages.module.css to match the UI Titlecase text */}
+          <h2 className={styles.sectionTitle} style={{ textTransform: 'none' }}>Settings</h2>
+          <p className={styles.sectionSub}>Manage your settings here</p>
         </div>
       </div>
       <div className={styles.settingsGrid}>
@@ -25,12 +26,12 @@ export default function Settings() {
         </div>
         <div className={styles.settingCard}>
           <p className={styles.settingTitle}>Max Questions Per Quiz</p>
-          <p className={styles.settingDesc}>Default number of questions shown per session</p>
+          <p className={styles.settingDesc}>Set the maximum number of questions per quiz</p>
           <input className={styles.input} type="number" defaultValue="10" />
         </div>
         <div className={styles.settingCard}>
           <p className={styles.settingTitle}>Allow Registration</p>
-          <p className={styles.settingDesc}>Let new students sign up on their own</p>
+          <p className={styles.settingDesc}>Allow users to create their own accounts</p>
           <label className={styles.toggle}>
             <input type="checkbox" defaultChecked />
             <span className={styles.toggleSlider} />
