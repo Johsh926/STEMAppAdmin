@@ -13,7 +13,6 @@ export default function Navbar({ tabs, activeTab, onTabChange, userEmail, onSign
     <header className={styles.nav}>
       <div className={styles.navLeft}>
         <div className={styles.navLogo}>
-          <span className={styles.navLogoIcon}>🛡️</span>
           <span className={styles.navLogoText}>Admin Portal</span>
         </div>
 
@@ -25,7 +24,6 @@ export default function Navbar({ tabs, activeTab, onTabChange, userEmail, onSign
               onClick={() => onTabChange(tab.id)}
               className={`${styles.navTab} ${activeTab === tab.id ? styles.navTabActive : ""}`}
             >
-              <span className={styles.navTabIcon}>{tab.icon}</span>
               {tab.label}
             </button>
           ))}
@@ -35,7 +33,6 @@ export default function Navbar({ tabs, activeTab, onTabChange, userEmail, onSign
       <div className={styles.navRight}>
         {userEmail && <span className={styles.navUser}>{userEmail}</span>}
 
-        {/* Settings button (top bar, left of Sign out) */}
         <button
           type="button"
           onClick={() => onTabChange("settings")}

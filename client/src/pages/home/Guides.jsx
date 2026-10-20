@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   collection, getDocs, doc,
-  getDoc, setDoc, deleteDoc, serverTimestamp,
+  setDoc, deleteDoc, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
 import Modal from "../../components/Modal";
@@ -10,11 +10,17 @@ import styles from "./Pages.module.css";
 import { useAuth } from "../../contexts/authContext";
 import { logAction } from "../../firebase/logs";
 
+const DEFAULT_GUIDE_TOPICS = [
+  { id: "graphs", title: "Graphs" },
+  { id: "level-1", title: "Level 1" },
+  { id: "level-2", title: "Level 2" },
+  { id: "level-3", title: "Level 3" },
+];
+
 export default function Guides() {
-  const [topics, setTopics]               = useState([]);
+  const [topics, setTopics]               = useState(DEFAULT_GUIDE_TOPICS);
   const [guides, setGuides]               = useState({});
   const [loading, setLoading]             = useState(true);
-  const [selectedTopic, setSelectedTopic] = useState(null);
   const [editingGuide, setEditingGuide]   = useState(null);
   const [viewingGuide, setViewingGuide]   = useState(null);
   const { currentUser, userRole }         = useAuth();
@@ -27,7 +33,7 @@ export default function Guides() {
     try {
       const topicsSnap = await getDocs(collection(db, "questions"));
       const topicList  = topicsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setTopics(topicList);
+      if (topicList.length > 0) setTopics(topicList);
 
       const guidesSnap = await getDocs(collection(db, "guides"));
       const guidesMap  = {};
@@ -44,22 +50,22 @@ export default function Guides() {
 
   async function handleDelete(topicId) {
   if (!window.confirm("Delete this guide?")) return;
-  const topicTitle = topics.find(t => t.id === topicId)?.title || topicId; // read before it's gone
+  const topicTitle = topics.find(t => t.id === topicId)?.title || topicId; 
   try {
     await deleteDoc(doc(db, "guides", topicId));
     setGuides(prev => {
       const updated = { ...prev };
       delete updated[topicId];
-      return updated; // pure — just returns the new state, no side effects inside
+      return updated; 
     });
-      logAction(actor, "delete_guide", `Deleted guide for "${topicTitle}"`); // fires once, after the write succeeds
+      logAction(actor, "delete_guide", `Deleted guide for "${topicTitle}"`); 
     } catch (err) {
       console.error("Delete failed:", err);
     }
   }
 
   async function handleSave(topicId, data) {
-    const isNewGuide = !guides[topicId]; // must be read before setDoc/setGuides run
+    const isNewGuide = !guides[topicId]; 
 
     await setDoc(doc(db, "guides", topicId), {
       ...data,
@@ -80,13 +86,6 @@ export default function Guides() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <div>
-          <h2 className={styles.sectionTitle}>Topic Guides</h2>
-          <p className={styles.sectionSub}>One guide per topic — sections with headings and content</p>
-        </div>
-      </div>
-
       <div className={styles.guideGrid}>
         {topics.map(topic => {
           const guide     = guides[topic.id];
@@ -111,35 +110,22 @@ export default function Guides() {
               </div>
 
               <div className={styles.guideCardActions}>
-                {hasGuide ? (
-                  <>
-                    <button
-                      className={styles.rowBtn}
-                      onClick={() => setViewingGuide({ topicId: topic.id, guide })}
-                    >
-                      View
-                    </button>
-                    <button
-                      className={styles.rowBtn}
-                      onClick={() => setEditingGuide({ topicId: topic.id, guide })}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
-                      onClick={() => handleDelete(topic.id)}
-                    >
-                      Delete
-                    </button>
-                  </>
-                ) : (
+                {hasGuide && (
                   <button
-                    className={styles.actionBtn}
-                    onClick={() => setEditingGuide({ topicId: topic.id, guide: null })}
+                    type="button"
+                    className={styles.rowBtn}
+                    onClick={() => setViewingGuide({ topicId: topic.id, guide })}
                   >
-                    + Create Guide
+                    View
                   </button>
                 )}
+                <button
+                  type="button"
+                  className={styles.actionBtn}
+                  onClick={() => setEditingGuide({ topicId: topic.id, guide: hasGuide ? guide : null })}
+                >
+                  + Create Guide
+                </button>
               </div>
             </div>
           );
@@ -187,11 +173,14 @@ function ViewGuideModal({ topicId, guide, topics, onClose }) {
                 <p className={styles.guideSectionContent}>{section.content}</p>
               )}
               {section.imageUrl && (
-                <img
-                  src={section.imageUrl}
-                  alt={section.heading || `Section ${i + 1}`}
-                  className={styles.guideSectionImage}
-                />
+                <>
+                  <img
+                    src={section.imageUrl}
+                    alt={section.heading || `Section ${i + 1}`}
+                    className={styles.guideSectionImage}
+                  />
+                  {section.caption && <p className={styles.guideSectionContent}>{section.caption}</p>}
+                </>
               )}
             </div>
           ))
@@ -249,8 +238,20 @@ function EditGuideModal({ topicId, guide, topics, onClose, onSaved }) {
     updateSection(i, "uploadProgress", 0);
     updateSection(i, "imageUrl", "");
 
-    const CLOUD_NAME    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;   // name top left
-    const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET; //preset name
+    const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!CLOUD_NAME || !UPLOAD_PRESET) {
+      updateSection(i, "uploadProgress", null);
+      alert("Image upload is not configured. Add VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET to your client .env file.");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      updateSection(i, "uploadProgress", null);
+      alert("Please select an image file.");
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -293,7 +294,11 @@ function EditGuideModal({ topicId, guide, topics, onClose, onSaved }) {
   }
 
   async function handleSave() {
-    const filled = sections.filter(s => s.heading.trim() || s.content.trim());
+    const filled = sections.filter(s =>
+      String(s.heading || "").trim() ||
+      String(s.content || "").trim() ||
+      String(s.imageUrl || "").trim()
+    );
     if (filled.length === 0) {
       setError("At least one section with a heading or content is required.");
       return;
@@ -346,7 +351,7 @@ function EditGuideModal({ topicId, guide, topics, onClose, onSaved }) {
               <label className={styles.label}>Heading</label>
               <input
                 className={styles.input}
-                value={section.heading}
+                value={section.heading || ""}
                 onChange={e => updateSection(i, "heading", e.target.value)}
                 placeholder="e.g. What is a Function?"
               />
@@ -356,7 +361,7 @@ function EditGuideModal({ topicId, guide, topics, onClose, onSaved }) {
               <label className={styles.label}>Content</label>
               <textarea
                 className={styles.input}
-                value={section.content}
+                value={section.content || ""}
                 onChange={e => updateSection(i, "content", e.target.value)}
                 placeholder="Write the guide content for this section..."
                 rows={4}
@@ -369,12 +374,19 @@ function EditGuideModal({ topicId, guide, topics, onClose, onSaved }) {
                 Image <span className={styles.optional}>(optional)</span>
               </label>
 
-              <input
-                type="file"
-                accept="image/*"
-                className={styles.fileInput}
-                onChange={e => handleImageUpload(i, e.target.files[0])}
-              />
+              <label className={styles.fileInputWrapper}>
+                + Add Image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className={styles.fileInputHidden}
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImageUpload(i, file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
 
               {section.uploadProgress != null && (
                 <div>
