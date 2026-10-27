@@ -54,11 +54,7 @@ export default function Logs() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <div>
-          <h2 className={styles.sectionTitle}>Activity Logs</h2>
-          <p className={styles.sectionSub}>Most recent 200 actions — admins only</p>
-        </div>
+      <div className={styles.pageHeader} style={{ justifyContent: "flex-end" }}>
         <button className={styles.rowBtn} onClick={fetchLogs}>Refresh</button>
       </div>
 

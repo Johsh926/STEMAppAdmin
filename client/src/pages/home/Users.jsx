@@ -13,19 +13,21 @@ export default function Users() {
   const actor = { uid: currentUser?.uid, email: currentUser?.email, role: userRole };
 
   const [allUsers, setAllUsers] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [filter, setFilter]     = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => { fetchAllUsers(); }, []);
 
   async function fetchAllUsers() {
     setLoading(true);
     try {
-      const [usersSnap, teachersSnap, adminsSnap, usernamesSnap] = await Promise.all([
+      const [usersSnap, teachersSnap, adminsSnap, usernamesSnap, leaderboardSnap] = await Promise.all([
         getDocs(collection(db, "users")),
         getDocs(collection(db, "teacheraccounts")),
         getDocs(collection(db, "adminaccounts")),
         getDocs(collection(db, "usernames")),
+        getDocs(collection(db, "leaderboard")),
       ]);
 
       const uidToUsername = {};
@@ -34,15 +36,26 @@ export default function Users() {
         if (data.uid) uidToUsername[data.uid] = d.id;
       });
 
-      setAllUsers([
+      const uidToHighestLevel = {};
+      leaderboardSnap.docs.forEach(d => {
+        const data = d.data();
+        if (data.uid) uidToHighestLevel[data.uid] = data.HighestLevel ?? 0;
+      });
+
+      const combinedUsers = [
         ...usersSnap.docs.map(d => ({
           id: d.id, col: "users", role: "Student",
           ...d.data(),
           username: uidToUsername[d.id] || "—",
+          highestLevel: uidToHighestLevel[d.id] ?? 0,
         })),
         ...teachersSnap.docs.map(d => ({ id: d.id, col: "teacheraccounts", role: "Teacher", ...d.data() })),
         ...adminsSnap.docs.map(d => ({ id: d.id, col: "adminaccounts", role: "Admin", ...d.data() })),
-      ]);
+      ];
+
+      const uniqueUsers = Array.from(new Map(combinedUsers.filter(u => u.email || u.admin_email).map(item => [item.email || item.admin_email, item])).values());
+      setAllUsers(uniqueUsers);
+
     } catch (err) {
       console.error("Failed to fetch users:", err);
     } finally {
@@ -79,52 +92,49 @@ export default function Users() {
     }
   }
 
-  async function handlePasswordReset(email) {
-    if (!email) { alert("No email found for this user."); return; }
-    try {
-      await sendPasswordResetEmail(auth, email);
-      alert(`Password reset email sent to ${email}`);
-      logAction(actor, "reset_password", `Sent password reset email to ${email}`);
-    } catch (err) {
-      console.error(err);
-      alert("Failed to send reset email.");
-    }
-  }
-
-  const filtered = filter === "all" ? allUsers : allUsers.filter(u => u.role.toLowerCase() === filter);
+  const filtered = allUsers.filter(u => {
+    const matchesFilter = filter === "all" || u.role.toLowerCase() === filter;
+    const matchesSearch = (u.username || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (u.email || u.admin_email || "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   function roleBadgeColor(role) {
     if (role === "Teacher") return "purple";
-    if (role === "Admin")   return "blue";
+    if (role === "Admin") return "blue";
     return "gray";
   }
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <div>
-          <h2 className={styles.sectionTitle}>All Users</h2>
-          <p className={styles.sectionSub}>{allUsers.length} total records</p>
+      <div className={styles.filterRow} style={{ justifyContent: "space-between" }}>
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          {["all", "student", "teacher", "admin"].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`${styles.filterBtn} ${filter === f ? styles.filterBtnActive : ""}`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+              <span className={styles.filterCount}>
+                {f === "all" ? allUsers.length : allUsers.filter(u => u.role.toLowerCase() === f).length}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className={styles.searchRow} style={{ width: "auto" }}>
+          <input
+            type="text"
+            className={styles.searchBox}
+            placeholder="Search Users"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 
-      <div className={styles.filterRow}>
-        {["all", "student", "teacher", "admin"].map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`${styles.filterBtn} ${filter === f ? styles.filterBtnActive : ""}`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-            <span className={styles.filterCount}>
-              {f === "all" ? allUsers.length : allUsers.filter(u => u.role.toLowerCase() === f).length}
-            </span>
-          </button>
-        ))}
-      </div>
-
       <Table
-        columns={["Username", "Email", "Role", "Status", "Joined", "Actions"]}
+        columns={["Username", "Email", "Role", "Highest Level", "Status", "Joined", "Actions"]}
         loading={loading}
         empty={filtered.length === 0}
         emptyText="No users found."
@@ -133,10 +143,13 @@ export default function Users() {
           <tr key={u.id}>
             <td>{u.username || "—"}</td>
             <td className={styles.muted}>{u.email || u.admin_email || "—"}</td>
-            <td><Badge color={roleBadgeColor(u.role)}>{u.role}</Badge></td>
+            <td>
+              <Badge color={roleBadgeColor(u.role)}>{u.role.charAt(0).toUpperCase() + u.role.slice(1)}</Badge>
+            </td>
+            <td>{u.highestLevel || "—"}</td>
             <td>
               <Badge color={u.status === "inactive" ? "red" : "green"}>
-                {u.status || "active"}
+                {u.status ? u.status.charAt(0).toUpperCase() + u.status.slice(1) : "Active"}
               </Badge>
             </td>
             <td className={styles.muted}>
@@ -146,17 +159,8 @@ export default function Users() {
               <button className={styles.rowBtn} onClick={() => handleToggleStatus(u)}>
                 {u.status === "inactive" ? "Activate" : "Deactivate"}
               </button>
-              <button
-                className={`${styles.rowBtn} ${styles.rowBtnDanger}`}
-                onClick={() => handleDelete(u.id, u.col)}
-              >
+              <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`} onClick={() => handleDelete(u.id, u.col)}>
                 Remove
-              </button>
-              <button
-                className={styles.rowBtn}
-                onClick={() => handlePasswordReset(u.email || u.admin_email)}
-              >
-                Reset Password
               </button>
             </td>
           </tr>

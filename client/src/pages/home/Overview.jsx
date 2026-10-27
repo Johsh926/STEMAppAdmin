@@ -1,30 +1,33 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
 import StatCard from "../../components/StatCard";
 import styles from "./Pages.module.css";
 
-export default function Overview(){
-  const [stats, setStats] = useState({ users: null, teachers: null, admins: null, questions: null});
+export default function Overview() {
+  const [stats, setStats] = useState({ users: null, teachers: null, admins: null, questions: null });
   const [loading, setLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState([]);
 
   useEffect(() => {
     async function fetchStats() {
-      try{
-        const [usersSnap, teacherSnap, adminsSnap, questionsSnap] = await Promise.all([
+      try {
+        const [usersSnap, teacherSnap, adminsSnap, questionsSnap, logsSnap] = await Promise.all([
           getDocs(collection(db, "users")),
           getDocs(collection(db, "teacheraccounts")),
           getDocs(collection(db, "adminaccounts")),
           getDocs(collection(db, "questions")),
+          getDocs(query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(8))),
         ]);
+        setRecentActivity(logsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
         setStats({
-          users:  usersSnap.size,
+          users: usersSnap.size,
           teachers: teacherSnap.size,
           admins: adminsSnap.size,
           questions: questionsSnap.size,
         });
       } catch (err) {
-        console.error("Failed to fetch stats:" , err);
+        console.error("Failed to fetch stats:", err);
       } finally {
         setLoading(false);
       }
@@ -32,16 +35,32 @@ export default function Overview(){
     fetchStats();
   }, []);
 
-  if (loading) return <p className={styles.loadingText}>Loading Stats...</p>;
+  if (loading) return <div className={styles.page}><p className={styles.loadingText}>Loading overview...</p></div>;
 
-  return(
+  return (
     <div className={styles.page}>
       <div className={styles.statsGrid}>
-        <StatCard icon="👥" value={stats.users} label="Students" />
-        <StatCard icon="🎓" value={stats.teachers} label="Teachers" />
-        <StatCard icon="🛡️" value={stats.admins} label="Admins" />
-        <StatCard icon="📋" value={stats.questions} label="Questions" />
+        <StatCard value={stats.users} label="STUDENTS" />
+        <StatCard value={stats.teachers} label="TEACHERS" />
+        <StatCard value={stats.admins} label="ADMINS" />
+        <StatCard value={stats.questions} label="QUESTIONS" />
       </div>
+      <section className={styles.recentActivity}>
+        <h3 className={styles.recentActivityTitle}>RECENT ACTIVITY</h3>
+        <div className={styles.recentActivityPanel}>
+          {recentActivity.length === 0 ? (
+            <p className={styles.recentActivityEmpty}>No recent activity to display.</p>
+          ) : recentActivity.map(item => (
+            <div className={styles.activityItem} key={item.id}>
+              <div className={styles.activityMain}>
+                <span className={styles.activityAction}>{String(item.action || "Activity").replaceAll("_", " ")}: </span>
+                <span className={styles.activityDetails}>{item.details || item.actorEmail || "—"}</span>
+              </div>
+              <span className={styles.activityTime}>{item.timestamp?.toDate ? item.timestamp.toDate().toLocaleString() : ""}</span>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

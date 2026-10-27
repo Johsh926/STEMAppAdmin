@@ -9,65 +9,34 @@ import Modal from "../../components/Modal";
 import styles from "./Pages.module.css";
 
 export default function Accounts() {
-  const [activeSection, setActiveSection] = useState("teacher");
   const [showTeacherModal, setShowTeacherModal] = useState(false);
   const [showAdminModal, setShowAdminModal]     = useState(false);
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <div>
-          <h2 className={styles.sectionTitle}>Account Management</h2>
-          <p className={styles.sectionSub}>Create teacher and admin accounts</p>
+      <div className={styles.accountSection}>
+        <div className={styles.accountCard}>
+          <div className={styles.accountCardIcon}></div>
+          <h3 className={styles.accountCardTitle}>Create Teacher Account</h3>
+          <p className={styles.accountCardDesc}>
+            Creates a Firebase Auth account and saves the teacher information to the teacher accounts collection. Teachers can use these credentials to log in to the Teacher Portal.
+          </p>
+          <button className={styles.actionBtn} onClick={() => setShowTeacherModal(true)}>
+            Create Teacher
+          </button>
+        </div>
+
+        <div className={styles.accountCard}>
+          <div className={styles.accountCardIcon}></div>
+          <h3 className={styles.accountCardTitle}>Create Admin Account</h3>
+          <p className={styles.accountCardDesc}>
+            Creates an admin account and securely saves the account information. Admins can use these credentials to log in to the Admin Portal.
+          </p>
+          <button className={styles.actionBtn} onClick={() => setShowAdminModal(true)}>
+            Create Admin
+          </button>
         </div>
       </div>
-
-      <div className={styles.filterRow}>
-        <button
-          className={`${styles.filterBtn} ${activeSection === "teacher" ? styles.filterBtnActive : ""}`}
-          onClick={() => setActiveSection("teacher")}
-        >
-          🎓 Teacher Accounts
-        </button>
-        <button
-          className={`${styles.filterBtn} ${activeSection === "admin" ? styles.filterBtnActive : ""}`}
-          onClick={() => setActiveSection("admin")}
-        >
-          🛡️ Admin Accounts
-        </button>
-      </div>
-
-      {activeSection === "teacher" && (
-        <div className={styles.accountSection}>
-          <div className={styles.accountCard}>
-            <div className={styles.accountCardIcon}>🎓</div>
-            <h3 className={styles.accountCardTitle}>Create Teacher Account</h3>
-            <p className={styles.accountCardDesc}>
-              Creates a Firebase Auth account and saves it to the teacheraccounts collection.
-              Teachers can log in to the teacher portal with these credentials.
-            </p>
-            <button className={styles.actionBtn} onClick={() => setShowTeacherModal(true)}>
-              + Create Teacher
-            </button>
-          </div>
-        </div>
-      )}
-
-      {activeSection === "admin" && (
-        <div className={styles.accountSection}>
-          <div className={styles.accountCard}>
-            <div className={styles.accountCardIcon}>🛡️</div>
-            <h3 className={styles.accountCardTitle}>Create Admin Account</h3>
-            <p className={styles.accountCardDesc}>
-              Creates a Firebase Auth account and saves it to the adminaccounts collection.
-              Admins can log in to this portal with these credentials.
-            </p>
-            <button className={styles.actionBtn} onClick={() => setShowAdminModal(true)}>
-              + Create Admin
-            </button>
-          </div>
-        </div>
-      )}
 
       {showTeacherModal && (
         <CreateAccountModal type="teacher" onClose={() => setShowTeacherModal(false)} />
