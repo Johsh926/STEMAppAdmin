@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* Shared page layout */
+
 .layout {
   min-height: 100vh;
   background: #fffdf8;
@@ -17,7 +17,7 @@
   padding: 38px 28px 32px;
 }
 
-/* Updated Header Layout */
+
 .pageHeader {
   display: flex;
   justify-content: space-between;
@@ -47,7 +47,7 @@
   line-height: 1.5;
 }
 
-/* Overview statistic cards */
+
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -76,7 +76,6 @@
   font-weight: 700;
 }
 
-/* Recent Activity additions */
 .recentActivity {
   margin-top: 32px;
 }
@@ -302,8 +301,14 @@
 .actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.actionsCell {
+  text-align: center;
+  min-width: 150px;
 }
 
 .rowBtn {
@@ -322,10 +327,44 @@
   background: #fff4ce;
 }
 
+.rowBtn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.rowBtnActivate {
+  border-color: #a7e2b3;
+  background: #dff5e4;
+  color: #176b2a;
+}
+
+.rowBtnActivate:hover {
+  border-color: #63c47b;
+  background: #c8edd2;
+  color: #125923;
+}
+
+.rowBtnDeactivate {
+  border-color: #e6d39a;
+  background: #f7e8bd;
+  color: #6b4f13;
+}
+
+.rowBtnDeactivate:hover {
+  border-color: #d3b45d;
+  background: #f3d98e;
+}
+
+.rowBtnDanger {
+  border-color: #f1b6b6;
+  background: #fbe0e0;
+  color: #a32121;
+}
+
 .rowBtnDanger:hover {
-  border-color: #fecaca;
-  background: #fef2f2;
-  color: #dc2626;
+  border-color: #e58b8b;
+  background: #f7caca;
+  color: #8f1515;
 }
 
 .actionBtn {
@@ -705,7 +744,7 @@
   text-align: center;
 }
 
-/* Custom Image Upload Box */
+
 .fileInputWrapper {
   position: relative;
   display: flex;
@@ -994,8 +1033,7 @@
   }
 }
 
-/* Guides.jsx compatibility and modal polish.
-   The original stylesheet above is intentionally preserved. */
+
 .page {
   display: flex;
   flex-direction: column;

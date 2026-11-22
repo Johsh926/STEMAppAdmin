@@ -40,10 +40,10 @@ export default function Overview() {
   return (
     <div className={styles.page}>
       <div className={styles.statsGrid}>
-        <StatCard value={stats.users} label="STUDENTS" />
-        <StatCard value={stats.teachers} label="TEACHERS" />
-        <StatCard value={stats.admins} label="ADMINS" />
-        <StatCard value={stats.questions} label="QUESTIONS" />
+        <StatCard value={stats.users} label="STUDENTS" labelColor="#e9a600" />
+        <StatCard value={stats.teachers} label="TEACHERS" labelColor="#8a4b24" />
+        <StatCard value={stats.admins} label="ADMINS" labelColor="#35b84a" />
+        <StatCard value={stats.questions} label="QUESTIONS" labelColor="#e9a600" />
       </div>
       <section className={styles.recentActivity}>
         <h3 className={styles.recentActivityTitle}>RECENT ACTIVITY</h3>
