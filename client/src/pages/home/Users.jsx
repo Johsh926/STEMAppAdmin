@@ -8,6 +8,21 @@ import Table from "../../components/Table";
 import Badge from "../../components/Badge";
 import styles from "./Pages.module.css";
 
+
+
+function getJoinedDate(user) {
+  const candidates = [user.createdAt, user.created_at, user.joinedAt, user.dateJoined, user.registeredAt, user.timestamp];
+  for (const value of candidates) {
+    let date = null;
+    if (value?.toDate) date = value.toDate(); // Firestore Timestamp
+    else if (value instanceof Date) date = value;
+    else if (typeof value === "number") date = new Date(value);
+    else if (typeof value === "string" && value.trim()) date = new Date(value);
+    if (date && !Number.isNaN(date.getTime())) return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+  return "—"; // Don't invent a date when the database has no join/creation timestamp.
+}
+
 export default function Users() {
   const { currentUser, userRole } = useAuth();
   const actor = { uid: currentUser?.uid, email: currentUser?.email, role: userRole };
@@ -16,6 +31,7 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [busyUserKey, setBusyUserKey] = useState(null);
 
   useEffect(() => { fetchAllUsers(); }, []);
 
@@ -77,18 +93,25 @@ export default function Users() {
         `Removed ${target?.role || userCol} "${target?.username || target?.email || userId}" from ${userCol}`);
     } catch (err) {
       console.error(err);
+      alert("Could not remove this user. Check your Firestore permissions and try again.");
     }
   }
 
   async function handleToggleStatus(user) {
-    const newStatus = user.status === "active" ? "inactive" : "active";
+    const currentStatus = (user.status || "active").toLowerCase();
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
+    const key = `${user.col}/${user.id}`;
+    setBusyUserKey(key);
     try {
       await updateDoc(doc(db, user.col, user.id), { status: newStatus });
-      setAllUsers(prev => prev.map(u => u.id === user.id ? { ...u, status: newStatus } : u));
+      setAllUsers(prev => prev.map(u => u.col === user.col && u.id === user.id ? { ...u, status: newStatus } : u));
       logAction(actor, newStatus === "inactive" ? "deactivate_user" : "activate_user",
         `${newStatus === "inactive" ? "Deactivated" : "Activated"} ${user.role} "${user.username || user.email}"`);
     } catch (err) {
-      console.error(err);
+      console.error("Status update failed:", err);
+      alert("Could not update user status. Check your Firestore permissions and try again.");
+    } finally {
+      setBusyUserKey(null);
     }
   }
 
@@ -102,7 +125,7 @@ export default function Users() {
   function roleBadgeColor(role) {
     if (role === "Teacher") return "purple";
     if (role === "Admin") return "blue";
-    return "gray";
+    return "yellow"; // Student: warm gold/yellow badge
   }
 
   return (
@@ -152,16 +175,24 @@ export default function Users() {
                 {u.status ? u.status.charAt(0).toUpperCase() + u.status.slice(1) : "Active"}
               </Badge>
             </td>
-            <td className={styles.muted}>
-              {u.createdAt?.toDate ? u.createdAt.toDate().toLocaleDateString() : "—"}
+            <td className={styles.muted} style={{ textAlign: "center", whiteSpace: "nowrap" }}>
+              {getJoinedDate(u)}
             </td>
-            <td className={styles.actions}>
-              <button className={styles.rowBtn} onClick={() => handleToggleStatus(u)}>
-                {u.status === "inactive" ? "Activate" : "Deactivate"}
-              </button>
-              <button className={`${styles.rowBtn} ${styles.rowBtnDanger}`} onClick={() => handleDelete(u.id, u.col)}>
-                Remove
-              </button>
+            <td className={styles.actionsCell}>
+              <div className={styles.actions}>
+                {(u.status || "active").toLowerCase() === "inactive" ? (
+                  <button type="button" className={`${styles.rowBtn} ${styles.rowBtnActivate}`} disabled={busyUserKey === `${u.col}/${u.id}`} onClick={() => handleToggleStatus(u)}>
+                    {busyUserKey === `${u.col}/${u.id}` ? "Saving..." : "Activate"}
+                  </button>
+                ) : (
+                  <button type="button" className={`${styles.rowBtn} ${styles.rowBtnDeactivate}`} disabled={busyUserKey === `${u.col}/${u.id}`} onClick={() => handleToggleStatus(u)}>
+                    {busyUserKey === `${u.col}/${u.id}` ? "Saving..." : "Deactivate"}
+                  </button>
+                )}
+                <button type="button" className={`${styles.rowBtn} ${styles.rowBtnDanger}`} onClick={() => handleDelete(u.id, u.col)}>
+                  Remove
+                </button>
+              </div>
             </td>
           </tr>
         ))}

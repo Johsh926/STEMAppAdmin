@@ -36,7 +36,6 @@
 /* ============================= */
 @media (max-width: 1024px) {
   .main {
-    /* FIX: Match the Navbar 150px width breakpoint */
     width: calc(100% - 150px);
     margin-left: 150px;
   }
@@ -65,7 +64,6 @@
 /* ============================= */
 @media (max-width: 768px) {
   .main {
-    /* FIX: Sidebar becomes static top-nav here, so reset margin to 0 */
     width: 100%;
     margin-left: 0;
     padding: 24px 18px;

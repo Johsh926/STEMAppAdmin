@@ -86,29 +86,6 @@
   color: #514a3c;
 }
 
-/* Settings button (matches screenshot: pale cream pill + dark gear) */
-.settingsBtn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: #fdf1cf;
-  color: #17140f;
-  font-family: 'Inter', sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  cursor: pointer;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-.settingsBtn:hover { background: #fff8e3; }
-.settingsBtn:focus-visible { outline: 2px solid #50b653; outline-offset: 2px; }
-.settingsBtnActive { background: #fff8e3; border-color: #50b653; }
-.settingsIcon { flex-shrink: 0; }
 
 .signOutBtn {
   padding: 8px 12px;

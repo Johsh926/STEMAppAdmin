@@ -119,7 +119,7 @@ const AdminLogin = () => {
         <div className={styles.card}>
           <div className={styles.header}>
             <div className={styles.logoWrap}>
-              <img src="/favicon.ico" alt="Logo" className={styles.logoImg} />
+              <img src="/Stemapp.jpg" alt="Logo" className={styles.logoImg} />
             </div>
             <h1 className={styles.title}>ADMIN PORTAL</h1>
           </div>

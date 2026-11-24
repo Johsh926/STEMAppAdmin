@@ -33,16 +33,6 @@ export default function Navbar({ tabs, activeTab, onTabChange, userEmail, onSign
       <div className={styles.navRight}>
         {userEmail && <span className={styles.navUser}>{userEmail}</span>}
 
-        <button
-          type="button"
-          onClick={() => onTabChange("settings")}
-          className={`${styles.settingsBtn} ${activeTab === "settings" ? styles.settingsBtnActive : ""}`}
-          aria-current={activeTab === "settings" ? "page" : undefined}
-        >
-          <GearIcon />
-          Settings
-        </button>
-
         <button type="button" onClick={onSignOut} disabled={signingOut} className={styles.signOutBtn}>
           {signingOut ? "Signing out..." : "Sign out"}
         </button>
